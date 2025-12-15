@@ -179,6 +179,23 @@ const studentController = {
         })
     },
 
+    deleteStudent: (req, res) => {
+        const studentId = req.params.id;
+
+        Students.deleteStudent(studentId, (err, result) => {
+            if (err) {
+                console.error('Delete error:', err);
+                return studentController.errorMessage(res, 500, { message: err.message || 'Internal server error', success: false });
+            }
+
+            if (!result || result.affectedRows === 0) {
+                return studentController.errorMessage(res, 404, { message: 'Student not found', success: false });
+            }
+
+            return studentController.successMessage(res, 200, { message: 'Student deleted successfully', success: true }, result);
+        });
+    },
+
     getProfile: (req, res) => {
         const username = req.user.username; // From JWT token
 

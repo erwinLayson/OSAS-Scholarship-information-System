@@ -13,6 +13,8 @@ route.post('/create', authenticateAdmin, studentController.createStudent);
 route.post('/reject', authenticateAdmin, studentController.rejectStudent);
 route.get('/student_list', authenticateAdmin, studentController.getAll);
 route.put('/edit/:id', authenticateAdmin, studentController.editStudent);
+// Admin delete student
+route.delete('/:id', authenticateAdmin, studentController.deleteStudent);
 
 // student routes authenticate
 route.post('/login', studentController.studentLogin);

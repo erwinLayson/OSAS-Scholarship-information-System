@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import AdminLayout from './shareFIles/AdminLayout';
+import API from '../../API/fetchAPI';
 
 const Reports = () => {
   const [reportType, setReportType] = useState('students');
@@ -7,13 +8,54 @@ const Reports = () => {
   const [dateTo, setDateTo] = useState('');
   const [status, setStatus] = useState('All');
 
-  // Mock statistics
-  const stats = [
-    { title: 'Total Students', value: '156', icon: '👥', color: 'bg-blue-900', trend: '+12%' },
-    { title: 'Total Scholarships', value: '8', icon: '💰', color: 'bg-green-900', trend: '+2' },
-    { title: 'Applications', value: '234', icon: '📋', color: 'bg-purple-900', trend: '+18%' },
-    { title: 'Active Programs', value: '5', icon: '✅', color: 'bg-yellow-900', trend: '0' },
-  ];
+  const [stats, setStats] = useState([
+    { title: 'Total Students', value: '...', icon: '👥', color: 'bg-blue-900', trend: '' },
+    { title: 'Total Scholarships', value: '...', icon: '💰', color: 'bg-green-900', trend: '' },
+    { title: 'Applications', value: '...', icon: '📋', color: 'bg-purple-900', trend: '' },
+    { title: 'Active Programs', value: '...', icon: '✅', color: 'bg-yellow-900', trend: '' },
+  ]);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        // students (admin route)
+        const studentsRes = await API.get('/students/student_list');
+        const students = Array.isArray(studentsRes.data) ? studentsRes.data : (studentsRes.data.data || []);
+
+        // scholarships (public route)
+        const scholarshipsRes = await API.get('/scholarships/list');
+        const scholarships = (scholarshipsRes.data && scholarshipsRes.data.data) ? scholarshipsRes.data.data : [];
+
+        // applications (admin route)
+        let applications = [];
+        try {
+          const appsRes = await API.get('/admin/applicants');
+          applications = Array.isArray(appsRes.data) ? appsRes.data : (appsRes.data.data || []);
+        } catch (e) {
+          // `/admin/applicants` may return raw array or require auth; try `/applicants` as fallback
+          try {
+            const appsRes2 = await API.get('/applicants');
+            applications = Array.isArray(appsRes2.data) ? appsRes2.data : (appsRes2.data.data || []);
+          } catch (e2) {
+            console.warn('Could not fetch applications', e2.message || e2);
+          }
+        }
+
+        const activePrograms = scholarships.filter(s => (s.status || '').toLowerCase() === 'active').length;
+
+        setStats([
+          { title: 'Total Students', value: String(students.length), icon: '👥', color: 'bg-blue-900', trend: '' },
+          { title: 'Total Scholarships', value: String(scholarships.length), icon: '💰', color: 'bg-green-900', trend: '' },
+          { title: 'Applications', value: String(applications.length), icon: '📋', color: 'bg-purple-900', trend: '' },
+          { title: 'Active Programs', value: String(activePrograms), icon: '✅', color: 'bg-yellow-900', trend: '' },
+        ]);
+      } catch (err) {
+        console.error('Error fetching report stats:', err);
+      }
+    };
+
+    fetchStats();
+  }, []);
 
   const reportTypes = [
     { value: 'students', label: 'Student Records Report', icon: '👥' },
