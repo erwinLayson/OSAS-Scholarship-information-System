@@ -436,7 +436,7 @@ const [studentEditData, setStudentEditData] = useState({
                             type="password"
                                                   name='password'
                                                   onChange={hanleInput}
-                            placeholder="Enter new password (leave blank to keep current)"
+                            placeholder="Enter new password (leave blank to keep)"
                             className="w-full px-3 py-2 bg-green-900 text-green-50 rounded border border-green-600 focus:outline-none focus:ring-2 focus:ring-green-400"
                         />
                         ) : (

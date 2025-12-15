@@ -19,5 +19,8 @@ route.delete('/:id', authenticateAdmin, studentController.deleteStudent);
 // student routes authenticate
 route.post('/login', studentController.studentLogin);
 route.get('/profile', authenticateStudent, studentController.getProfile);
+// Student self-service routes
+route.put('/profile', authenticateStudent, studentController.updateProfile);
+route.post('/profile/password', authenticateStudent, studentController.changePassword);
 
 module.exports = route;

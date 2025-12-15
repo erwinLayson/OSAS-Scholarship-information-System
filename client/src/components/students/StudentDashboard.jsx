@@ -12,6 +12,10 @@ const StudentDashboard = () => {
   const [loading, setLoading] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeView, setActiveView] = useState('dashboard');
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [profileForm, setProfileForm] = useState({ name: '', email: '', username: '' });
+  const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
+  const [showChangePassword, setShowChangePassword] = useState(false);
 
   useEffect(() => {
     fetchScholarships();
@@ -37,6 +41,7 @@ const StudentDashboard = () => {
       const response = await API.get('/students/profile');
       if (response.data.success) {
         setStudentData(response.data.data);
+        setProfileForm({ name: response.data.data.name || '', email: response.data.data.email || '', username: response.data.data.username || '' });
       }
     } catch (error) {
       console.error('Error fetching profile:', error);
@@ -52,14 +57,23 @@ const StudentDashboard = () => {
 
   const calculateAverage = () => {
     if (!studentData || !studentData.subjects) return 'N/A';
-    
-    const subjects = typeof studentData.subjects === 'string' 
-      ? JSON.parse(studentData.subjects) 
-      : studentData.subjects;
-    
-    if (subjects.length === 0) return 'N/A';
-    
-    const total = subjects.reduce((sum, subj) => sum + parseFloat(subj.grade || 0), 0);
+
+    let subjects;
+    try {
+      subjects = typeof studentData.subjects === 'string' ? JSON.parse(studentData.subjects) : studentData.subjects;
+    } catch (err) {
+      // fallback: try to coerce a JSON-like string
+      try {
+        const cleaned = String(studentData.subjects).replace(/([\w\d]+)\s*:/g, '"$1":');
+        subjects = JSON.parse(cleaned);
+      } catch (err2) {
+        return 'N/A';
+      }
+    }
+
+    if (!Array.isArray(subjects) || subjects.length === 0) return 'N/A';
+
+    const total = subjects.reduce((sum, subj) => sum + parseFloat(subj.grade || subj.score || 0), 0);
     return (total / subjects.length).toFixed(2);
   };
 
@@ -76,9 +90,20 @@ const StudentDashboard = () => {
     };
   };
 
-  const subjects = studentData?.subjects 
-    ? (typeof studentData.subjects === 'string' ? JSON.parse(studentData.subjects) : studentData.subjects)
-    : [];
+  const subjects = (() => {
+    if (!studentData || !studentData.subjects) return [];
+    try {
+      return typeof studentData.subjects === 'string' ? JSON.parse(studentData.subjects) : studentData.subjects;
+    } catch (err) {
+      try {
+        const cleaned = String(studentData.subjects).replace(/([\w\d]+)\s*:/g, '"$1":');
+        const parsed = JSON.parse(cleaned);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (err2) {
+        return [];
+      }
+    }
+  })();
   
   const average = calculateAverage();
   const gradeStatus = getGradeStatus();
@@ -108,6 +133,106 @@ const StudentDashboard = () => {
         return renderDashboardView();
     }
   };
+
+  const handleSaveProfile = async () => {
+    try {
+      const res = await API.put('/students/profile', profileForm);
+      if (res.data && res.data.success) {
+        showToast('Profile updated', 'success');
+        // refresh profile
+        await fetchStudentProfile();
+        setIsEditingProfile(false);
+      } else {
+        showToast(res.data?.message || 'Failed to update profile', 'error');
+      }
+    } catch (err) {
+      console.error('Error updating profile', err);
+      showToast(err.response?.data?.message || 'Failed to update profile', 'error');
+    }
+  }
+
+  const handleChangePassword = async (payload) => {
+    try {
+      const { currentPassword, newPassword, confirmPassword } = payload ?? passwordForm;
+      if (!currentPassword || !newPassword || !confirmPassword) {
+        showToast('Fill all password fields', 'warning');
+        return;
+      }
+      if (newPassword !== confirmPassword) {
+        showToast('New password and confirm do not match', 'warning');
+        return;
+      }
+
+      const res = await API.post('/students/profile/password', { currentPassword, newPassword, confirmPassword });
+      if (res.data && res.data.success) {
+        showToast('Password changed successfully', 'success');
+        setShowChangePassword(false);
+        setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      } else {
+        showToast(res.data?.message || 'Failed to change password', 'error');
+      }
+    } catch (err) {
+      console.error('Change password error', err);
+      showToast(err.response?.data?.message || 'Failed to change password', 'error');
+    }
+  };
+
+  const ChangePasswordModal = ({ visible, onClose, onChangePassword }) => {
+    const [localForm, setLocalForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
+
+    // initialize when modal opens
+    useEffect(() => {
+      if (visible) setLocalForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    }, [visible]);
+
+    if (!visible) return null;
+    return (
+      <div className="fixed inset-0 backdrop-blur-sm bg-green-900/30 flex items-center justify-center z-50 p-4">
+        <div className="bg-green-900 rounded-2xl shadow-2xl border border-green-700 max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="sticky top-0 bg-green-800 p-6 border-b border-green-700 flex items-center justify-between">
+            <div>
+              <h3 className="text-2xl font-bold text-green-50">Change Password</h3>
+              <p className="text-green-300 text-sm">Update your account password</p>
+            </div>
+            <button onClick={onClose} className="text-green-300 hover:text-white text-2xl font-bold">×</button>
+          </div>
+
+          <div className="p-6">
+            <form className="space-y-6" onSubmit={(e)=>{e.preventDefault(); onChangePassword(localForm);}}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <input
+                  type="password"
+                  placeholder="Current password"
+                  value={localForm.currentPassword}
+                  onChange={e=>setLocalForm(prev=>({...prev, currentPassword: e.target.value}))}
+                  className="w-full px-3 py-3 bg-green-900 text-green-50 rounded border border-green-600 focus:outline-none focus:ring-2 focus:ring-green-400"
+                />
+                <input
+                  type="password"
+                  placeholder="New password"
+                  value={localForm.newPassword}
+                  onChange={e=>setLocalForm(prev=>({...prev, newPassword: e.target.value}))}
+                  className="w-full px-3 py-3 bg-green-900 text-green-50 rounded border border-green-600 focus:outline-none focus:ring-2 focus:ring-green-400"
+                />
+                <input
+                  type="password"
+                  placeholder="Confirm new password"
+                  value={localForm.confirmPassword}
+                  onChange={e=>setLocalForm(prev=>({...prev, confirmPassword: e.target.value}))}
+                  className="w-full px-3 py-3 bg-green-900 text-green-50 rounded border border-green-600 focus:outline-none focus:ring-2 focus:ring-green-400 md:col-span-2"
+                />
+              </div>
+
+              <div className="mt-4 flex gap-3">
+                <button type="button" onClick={onClose} className="flex-1 bg-gray-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-gray-500 transition-colors">Cancel</button>
+                <button type="submit" className="flex-1 bg-green-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-green-500 transition-colors">Change Password</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   const renderDashboardView = () => (
     <>
@@ -359,24 +484,57 @@ const StudentDashboard = () => {
           </svg>
           Personal Information
         </h3>
+        <div className="flex items-center justify-between mb-4">
+          <div />
+          <div className="flex gap-3">
+            {!isEditingProfile ? (
+              <button onClick={() => setIsEditingProfile(true)} className="px-4 py-2 bg-green-600 text-white rounded">Edit Profile</button>
+            ) : (
+              <>
+                <button onClick={() => handleSaveProfile()} className="px-4 py-2 bg-blue-600 text-white rounded">Save</button>
+                <button onClick={() => { setIsEditingProfile(false); setProfileForm({ name: studentData.name, email: studentData.email, username: studentData.username }); }} className="px-4 py-2 bg-gray-300 text-gray-800 rounded">Cancel</button>
+              </>
+            )}
+            <button onClick={() => setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' }) || setShowChangePassword(true)} className="px-4 py-2 bg-yellow-500 text-white rounded">Change Password</button>
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="bg-gray-50 p-4 rounded-lg">
             <p className="text-gray-600 text-sm font-medium mb-1">Full Name</p>
-            <p className="text-gray-800 text-lg font-semibold">{studentData?.name || 'N/A'}</p>
+            {!isEditingProfile ? (
+              <p className="text-gray-800 text-lg font-semibold">{studentData?.name || 'N/A'}</p>
+            ) : (
+              <input value={profileForm.name} onChange={(e)=>setProfileForm(prev=>({...prev, name: e.target.value}))} className="w-full px-3 py-2 rounded border" />
+            )}
           </div>
           <div className="bg-gray-50 p-4 rounded-lg">
             <p className="text-gray-600 text-sm font-medium mb-1">Email Address</p>
-            <p className="text-gray-800 text-lg">{studentData?.email || 'N/A'}</p>
+            {!isEditingProfile ? (
+              <p className="text-gray-800 text-lg">{studentData?.email || 'N/A'}</p>
+            ) : (
+              <input value={profileForm.email} onChange={(e)=>setProfileForm(prev=>({...prev, email: e.target.value}))} className="w-full px-3 py-2 rounded border" />
+            )}
           </div>
           <div className="bg-gray-50 p-4 rounded-lg">
             <p className="text-gray-600 text-sm font-medium mb-1">Username</p>
-            <p className="text-gray-800 text-lg font-mono">{studentData?.username || 'N/A'}</p>
+            {!isEditingProfile ? (
+              <p className="text-gray-800 text-lg font-mono">{studentData?.username || 'N/A'}</p>
+            ) : (
+              <input value={profileForm.username} onChange={(e)=>setProfileForm(prev=>({...prev, username: e.target.value}))} className="w-full px-3 py-2 rounded border font-mono" />
+            )}
           </div>
           <div className="bg-gray-50 p-4 rounded-lg">
             <p className="text-gray-600 text-sm font-medium mb-1">Student ID</p>
             <p className="text-gray-800 text-lg font-mono">#{studentData?.id || 'N/A'}</p>
           </div>
         </div>
+        {/* Change Password Modal area */}
+        <ChangePasswordModal
+          visible={showChangePassword}
+          onClose={()=>setShowChangePassword(false)}
+          onChangePassword={handleChangePassword}
+        />
       </div>
     );
   };

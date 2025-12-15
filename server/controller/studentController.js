@@ -229,6 +229,82 @@ const studentController = {
             });
         });
     },
+    updateProfile: (req, res) => {
+        const username = req.user.username;
+        const updateData = req.body;
+
+        if (!updateData || Object.keys(updateData).length === 0) {
+            return studentController.errorMessage(res, 400, { message: 'No data provided', success: false });
+        }
+
+        // Find student by username to get id
+        Students.getStudentByUsername(username, (err, result) => {
+            if (err) return studentController.errorMessage(res, 500, { message: err.message || 'Internal server error', success: false });
+            if (!result || result.length === 0) return studentController.errorMessage(res, 404, { message: 'Student not found', success: false });
+
+            const student = result[0];
+            const studentId = student.id;
+
+            // Prevent accidental password updates here
+            if (updateData.password) delete updateData.password;
+
+            // If email changed, ensure uniqueness
+            const checks = [];
+            if (updateData.email && updateData.email !== student.email) {
+                checks.push(cb => Students.getStudentByEmail(updateData.email, (e, r) => cb(e, r)));
+            }
+            if (updateData.username && updateData.username !== student.username) {
+                checks.push(cb => Students.getStudentByUsername(updateData.username, (e, r) => cb(e, r)));
+            }
+
+            const runChecks = (i) => {
+                if (i >= checks.length) {
+                    // perform update
+                    Students.updateStudent(studentId, updateData, (err2, updateRes) => {
+                        if (err2) return studentController.errorMessage(res, 500, { message: err2.message || 'Internal server error', success: false });
+                        return studentController.successMessage(res, 200, { message: 'Profile updated successfully', success: true }, updateRes);
+                    });
+                    return;
+                }
+
+                checks[i]((errc, rc) => {
+                    if (errc) return studentController.errorMessage(res, 500, { message: errc.message || 'Internal server error', success: false });
+                    if (rc && rc.length > 0) return studentController.errorMessage(res, 400, { message: 'Email or username already in use', success: false });
+                    runChecks(i+1);
+                });
+            };
+
+            runChecks(0);
+        });
+    },
+
+    changePassword: (req, res) => {
+        const username = req.user.username;
+        const { currentPassword, newPassword, confirmPassword } = req.body;
+
+        if (!currentPassword || !newPassword || !confirmPassword) {
+            return studentController.errorMessage(res, 400, { message: 'All password fields are required', success: false });
+        }
+
+        if (newPassword !== confirmPassword) {
+            return studentController.errorMessage(res, 400, { message: 'New password and confirm password do not match', success: false });
+        }
+
+        Students.getStudentByUsername(username, (err, result) => {
+            if (err) return studentController.errorMessage(res, 500, { message: err.message || 'Internal server error', success: false });
+            if (!result || result.length === 0) return studentController.errorMessage(res, 404, { message: 'Student not found', success: false });
+
+            const student = result[0];
+            const verify = require('bcrypt').compareSync(currentPassword, student.password);
+            if (!verify) return studentController.errorMessage(res, 401, { message: 'Current password is incorrect', success: false });
+
+            const hash = require('bcrypt').hashSync(newPassword, 10);
+            Students.updateStudent(student.id, { password: hash }, (err2, updateRes) => {
+                if (err2) return studentController.errorMessage(res, 500, { message: err2.message || 'Internal server error', success: false });
+                return studentController.successMessage(res, 200, { message: 'Password changed successfully', success: true }, updateRes);
+            });
+        });
+    },
     
 }
 
