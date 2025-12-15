@@ -291,7 +291,7 @@ const Reports = () => {
                     <span className="text-green-300 text-sm">Last Generated</span>
                     <span className="text-2xl">⏰</span>
                   </div>
-                  <p className="text-lg font-bold text-green-50">{summary && summary.lastGenerated ? new Date(summary.lastGenerated.created_at).toLocaleString() : 'N/A'}</p>
+                  <p className="text-lg font-bold text-green-50">{summary && summary.lastGenerated ? new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(summary.lastGenerated.created_at)) : 'N/A'}</p>
                   <p className="text-green-400 text-xs mt-1">{summary && summary.lastGenerated ? summary.lastGenerated.name : ''}</p>
                 </div>
 
