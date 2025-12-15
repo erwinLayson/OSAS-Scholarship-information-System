@@ -1,4 +1,5 @@
 const db = require('../config/database');
+const Reports = require('../model/reportModel');
 
 function formatCSV(rows, headers) {
   const escape = (v) => {
@@ -98,14 +99,52 @@ class ReportController {
 
         const csv = formatCSV(rows, headers);
         const filename = `report-${reportType}-${Date.now()}.csv`;
-        res.setHeader('Content-Type', 'text/csv');
-        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-        res.send(csv);
+
+        // record report metadata
+        try {
+          const size_bytes = Buffer.byteLength(csv, 'utf8');
+          const generated_by = req.user ? (req.user.username || req.user) : 'admin';
+          Reports.create({ name: filename, type: reportType, generated_by, filename, size_bytes, status: 'Ready' }, (err) => {
+            if (err) console.warn('Failed to record report metadata', err);
+            // continue to send CSV regardless
+            res.setHeader('Content-Type', 'text/csv');
+            res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+            res.send(csv);
+          });
+        } catch (e) {
+          console.warn('Error recording report', e);
+          res.setHeader('Content-Type', 'text/csv');
+          res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+          res.send(csv);
+        }
       });
     } catch (error) {
       console.error(error);
       return res.status(500).json({ message: 'Internal server error', success: false, error });
     }
+  }
+
+  static async getSummary(req, res) {
+    Reports.getSummary((err, data) => {
+      if (err) return res.status(500).json({ message: 'Internal server error', success: false, error: err });
+
+      const response = {
+        totalReportsGenerated: data.total_this_month || 0,
+        storageUsedBytes: data.storage_bytes || 0,
+        lastGenerated: data.lastGenerated || null,
+        mostGenerated: data.mostGenerated || null
+      };
+
+      res.status(200).json({ message: 'Summary retrieved', success: true, data: response });
+    });
+  }
+
+  static async getRecent(req, res) {
+    const limit = parseInt(req.query.limit || '10', 10);
+    Reports.getRecent(limit, (err, results) => {
+      if (err) return res.status(500).json({ message: 'Internal server error', success: false, error: err });
+      res.status(200).json({ message: 'Recent reports', success: true, data: results });
+    });
   }
 }
 

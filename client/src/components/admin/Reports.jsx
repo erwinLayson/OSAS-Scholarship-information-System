@@ -7,6 +7,8 @@ const Reports = () => {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [status, setStatus] = useState('All');
+  const [summary, setSummary] = useState(null);
+  const [recentReportsData, setRecentReportsData] = useState([]);
 
   const [stats, setStats] = useState([
     { title: 'Total Students', value: '...', icon: '👥', color: 'bg-blue-900', trend: '' },
@@ -49,6 +51,20 @@ const Reports = () => {
           { title: 'Applications', value: String(applications.length), icon: '📋', color: 'bg-purple-900', trend: '' },
           { title: 'Active Programs', value: String(activePrograms), icon: '✅', color: 'bg-yellow-900', trend: '' },
         ]);
+        // fetch reports summary and recent
+        try {
+          const summaryRes = await API.get('/reports/summary');
+          if (summaryRes.data && summaryRes.data.success) setSummary(summaryRes.data.data);
+        } catch (err) {
+          console.warn('Could not fetch reports summary', err.message || err);
+        }
+
+        try {
+          const recentRes = await API.get('/reports/recent?limit=6');
+          if (recentRes.data && recentRes.data.success) setRecentReportsData(recentRes.data.data);
+        } catch (err) {
+          console.warn('Could not fetch recent reports', err.message || err);
+        }
       } catch (err) {
         console.error('Error fetching report stats:', err);
       }
@@ -257,7 +273,7 @@ const Reports = () => {
                     <span className="text-green-300 text-sm">Total Reports Generated</span>
                     <span className="text-2xl">📊</span>
                   </div>
-                  <p className="text-2xl font-bold text-green-50">28</p>
+                  <p className="text-2xl font-bold text-green-50">{summary ? summary.totalReportsGenerated : '...'}</p>
                   <p className="text-green-400 text-xs mt-1">This month</p>
                 </div>
 
@@ -266,7 +282,7 @@ const Reports = () => {
                     <span className="text-green-300 text-sm">Storage Used</span>
                     <span className="text-2xl">💾</span>
                   </div>
-                  <p className="text-2xl font-bold text-green-50">47.8 MB</p>
+                  <p className="text-2xl font-bold text-green-50">{summary ? `${(summary.storageUsedBytes/1024/1024).toFixed(2)} MB` : '...'}</p>
                   <p className="text-green-400 text-xs mt-1">Of 500 MB available</p>
                 </div>
 
@@ -275,8 +291,8 @@ const Reports = () => {
                     <span className="text-green-300 text-sm">Last Generated</span>
                     <span className="text-2xl">⏰</span>
                   </div>
-                  <p className="text-lg font-bold text-green-50">2 days ago</p>
-                  <p className="text-green-400 text-xs mt-1">Student Records Report</p>
+                  <p className="text-lg font-bold text-green-50">{summary && summary.lastGenerated ? new Date(summary.lastGenerated.created_at).toLocaleString() : 'N/A'}</p>
+                  <p className="text-green-400 text-xs mt-1">{summary && summary.lastGenerated ? summary.lastGenerated.name : ''}</p>
                 </div>
 
                 <div className="bg-green-800 p-4 rounded-lg">
@@ -284,8 +300,8 @@ const Reports = () => {
                     <span className="text-green-300 text-sm">Most Generated</span>
                     <span className="text-2xl">📈</span>
                   </div>
-                  <p className="text-lg font-bold text-green-50">Applications</p>
-                  <p className="text-green-400 text-xs mt-1">12 reports this month</p>
+                  <p className="text-lg font-bold text-green-50">{summary && summary.mostGenerated ? summary.mostGenerated.type : 'N/A'}</p>
+                  <p className="text-green-400 text-xs mt-1">{summary && summary.mostGenerated ? `${summary.mostGenerated.cnt} reports this month` : ''}</p>
                 </div>
               </div>
             </div>
