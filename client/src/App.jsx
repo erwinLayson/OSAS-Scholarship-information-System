@@ -8,6 +8,7 @@ import AdminDashboard from "./components/admin/AdminDashboard";
 import Students from "./components/admin/Students";
 import ManageAdmin from "./components/admin/ManageAdmin";
 import Applications from "./components/admin/Applications";
+import ScholarshipApplications from "./components/admin/ScholarshipApplications";
 import Scholarships from "./components/admin/Scholarships";
 import Reports from "./components/admin/Reports";
 import Settings from "./components/admin/Settings";
@@ -35,6 +36,7 @@ function App() {
           <Route path='/admin/students' element={<ProtectedRoutes url={'admin'} elements={<Students/>}/>} />
           <Route path='/admin/manage' element={<ProtectedRoutes url={'admin'} elements={<ManageAdmin/>}/>} />
           <Route path='/admin/applications' element={<ProtectedRoutes  url={'admin'} elements={<Applications/>}/>} />
+          <Route path='/admin/scholarships/applications' element={<ProtectedRoutes url={'admin'} elements={<ScholarshipApplications/>}/>} />
           <Route path='/admin/scholarships' element={<ProtectedRoutes url={'admin'} elements={<Scholarships/>}/>} />
           <Route path='/admin/reports' element={<ProtectedRoutes url={'admin'} elements={<Reports/>}/>} />
           <Route path='/admin/settings' element={<ProtectedRoutes  url={'admin'} elements={<Settings/>}/>} />

@@ -50,6 +50,42 @@ class ScholarshipApplicationController {
       return res.status(500).json({ message: 'Failed to process files', success: false, error: e.message });
     }
   }
+
+  static listAll(req, res) {
+    const ScholarshipApplication = require('../model/scholarshipApplicationModel');
+    ScholarshipApplication.getAll((err, rows) => {
+      if (err) {
+        console.error('Error fetching applications:', err);
+        return res.status(500).json({ message: 'Internal server error', success: false, error: err });
+      }
+      return res.status(200).json({ message: 'Applications retrieved', success: true, data: rows });
+    });
+  }
+
+  static getById(req, res) {
+    const id = req.params.id;
+    ScholarshipApplication.getById(id, (err, rows) => {
+      if (err) return res.status(500).json({ message: 'Internal server error', success: false, error: err });
+      if (!rows || rows.length === 0) return res.status(404).json({ message: 'Application not found', success: false });
+      return res.status(200).json({ message: 'Application retrieved', success: true, data: rows[0] });
+    });
+  }
+
+  static updateStatus(req, res) {
+    const id = req.params.id;
+    const { status } = req.body;
+    if (!status) return res.status(400).json({ message: 'Status required', success: false });
+
+    ScholarshipApplication.getById(id, (err, rows) => {
+      if (err) return res.status(500).json({ message: 'Internal server error', success: false, error: err });
+      if (!rows || rows.length === 0) return res.status(404).json({ message: 'Application not found', success: false });
+
+      ScholarshipApplication.updateStatus(id, status, (uErr) => {
+        if (uErr) return res.status(500).json({ message: 'Failed to update status', success: false, error: uErr });
+        return res.status(200).json({ message: 'Status updated', success: true });
+      });
+    });
+  }
 }
 
 module.exports = ScholarshipApplicationController;

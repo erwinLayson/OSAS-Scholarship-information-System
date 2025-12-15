@@ -19,8 +19,29 @@ class ScholarshipApplication {
   }
 
   static getById(id, callback) {
-    const query = 'SELECT * FROM scholarship_applications WHERE id = ?';
+    const query = `SELECT a.*, s.name AS scholarship_name, st.name AS student_name, st.email AS email, st.subjects AS subjects
+                   FROM scholarship_applications a
+                   LEFT JOIN scholarships s ON a.scholarship_id = s.id
+                   LEFT JOIN students st ON a.student_id = st.id
+                   WHERE a.id = ?`;
     db.query(query, [id], callback);
+  }
+
+  static getAll(callback) {
+    const query = `SELECT a.*, s.name AS scholarship_name,
+               st.name AS student_name,
+               st.email AS email,
+               st.subjects AS subjects
+             FROM scholarship_applications a
+             LEFT JOIN scholarships s ON a.scholarship_id = s.id
+             LEFT JOIN students st ON a.student_id = st.id
+             ORDER BY a.created_at DESC`;
+    db.query(query, callback);
+  }
+
+  static updateStatus(id, status, callback) {
+    const query = 'UPDATE scholarship_applications SET status = ?, updated_at = NOW() WHERE id = ?';
+    db.query(query, [status, id], callback);
   }
 }
 

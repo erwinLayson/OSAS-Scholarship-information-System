@@ -13,7 +13,8 @@ const AdminLayout = ({ children, activeMenu, title, subtitle }) => {
     { id: 'dashboard', name: 'Dashboard', icon: '📊', path: '/dashboard' },
     { id: 'students', name: 'Students', icon: '👨‍🎓', path: '/admin/students' },
     { id: 'scholarships', name: 'Scholarships', icon: '💰', path: '/admin/scholarships' },
-    { id: 'applications', name: 'Applications', icon: '📋', path: '/admin/applications' },
+    { id: 'applications', name: 'Student Applications', icon: '📋', path: '/admin/applications' },
+    { id: 'scholarship_applications', name: 'Scholarship Applications', icon: '🗂️', path: '/admin/scholarships/applications' },
     { id: 'reports', name: 'Reports', icon: '📈', path: '/admin/reports' },
     { id: 'settings', name: 'Settings', icon: '⚙️', path: '/admin/settings' },
   ];

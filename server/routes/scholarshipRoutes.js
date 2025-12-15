@@ -14,6 +14,12 @@ scholarshipRoutes.get('/list', ScholarshipController.getAll);
 
 // Admin-only routes
 scholarshipRoutes.post('/create', authenticateAdmin, ScholarshipController.create);
+// Admin: manage scholarship applications
+scholarshipRoutes.get('/applications', authenticateAdmin, ScholarshipApplicationController.listAll);
+scholarshipRoutes.get('/applications/:id', authenticateAdmin, ScholarshipApplicationController.getById);
+scholarshipRoutes.put('/applications/:id/status', authenticateAdmin, ScholarshipApplicationController.updateStatus);
+
+// Scholarship CRUD
 scholarshipRoutes.get('/:id', authenticateAdmin, ScholarshipController.getById);
 scholarshipRoutes.put('/edit/:id', authenticateAdmin, ScholarshipController.update);
 scholarshipRoutes.delete('/delete/:id', authenticateAdmin, ScholarshipController.delete);
