@@ -1,6 +1,11 @@
 const express = require('express');
 const ScholarshipController = require('../controller/scholarshipController');
-const { authenticateAdmin } = require('../authenticate/auth');
+const ScholarshipApplicationController = require('../controller/scholarshipApplicationController');
+const { authenticateAdmin, authenticateStudent } = require('../authenticate/auth');
+const multer = require('multer');
+
+// multer temp storage
+const upload = multer({ dest: 'tmp/' });
 
 const scholarshipRoutes = express.Router();
 
@@ -12,5 +17,8 @@ scholarshipRoutes.post('/create', authenticateAdmin, ScholarshipController.creat
 scholarshipRoutes.get('/:id', authenticateAdmin, ScholarshipController.getById);
 scholarshipRoutes.put('/edit/:id', authenticateAdmin, ScholarshipController.update);
 scholarshipRoutes.delete('/delete/:id', authenticateAdmin, ScholarshipController.delete);
+
+// Student apply route (multipart/form-data, files field name: documents)
+scholarshipRoutes.post('/apply/:id', authenticateStudent, upload.array('documents', 10), ScholarshipApplicationController.apply);
 
 module.exports = scholarshipRoutes;

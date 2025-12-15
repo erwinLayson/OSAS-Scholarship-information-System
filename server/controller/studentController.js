@@ -122,7 +122,7 @@ const studentController = {
                 return studentController.errorMessage(res, 401, { message: "Incorrect password", success: false })
             }
 
-            const token = jwt.sign({ username }, process.env.STUDENT_LOGIN_SECRET_KEY, { expiresIn: "1h" });
+            const token = jwt.sign({ username, id: student.id }, process.env.STUDENT_LOGIN_SECRET_KEY, { expiresIn: "1h" });
 
             res.cookie("studentLogin", token, {
                 sameSite: "lax",
@@ -130,7 +130,8 @@ const studentController = {
                 secure:false
             });
 
-            return studentController.successMessage(res, 201, { message: "Login successfull", success: true });
+            // return token in response body as well (useful for AJAX requests when cookies aren't sent)
+            return studentController.successMessage(res, 201, { message: "Login successfull", success: true, token });
         })  
     },
 
@@ -262,14 +263,29 @@ const studentController = {
                     // perform update
                     Students.updateStudent(studentId, updateData, (err2, updateRes) => {
                         if (err2) return studentController.errorMessage(res, 500, { message: err2.message || 'Internal server error', success: false });
-                        return studentController.successMessage(res, 200, { message: 'Profile updated successfully', success: true }, updateRes);
+                        // If username was changed, re-issue student JWT so token matches new username
+                        const newUsername = updateData.username || student.username;
+                        try {
+                            const newToken = require('jsonwebtoken').sign({ username: newUsername, id: studentId }, process.env.STUDENT_LOGIN_SECRET_KEY, { expiresIn: '1h' });
+                            res.cookie('studentLogin', newToken, { sameSite: 'lax', httpOnly: true, secure: false });
+                            return studentController.successMessage(res, 200, { message: 'Profile updated successfully', success: true, token: newToken }, updateRes);
+                        } catch (e) {
+                            // token issuance failed, still return success
+                            console.warn('Failed to sign new token after profile update', e && e.message);
+                            return studentController.successMessage(res, 200, { message: 'Profile updated successfully', success: true }, updateRes);
+                        }
                     });
                     return;
                 }
 
                 checks[i]((errc, rc) => {
                     if (errc) return studentController.errorMessage(res, 500, { message: errc.message || 'Internal server error', success: false });
-                    if (rc && rc.length > 0) return studentController.errorMessage(res, 400, { message: 'Email or username already in use', success: false });
+                    // rc may contain rows; ignore the row that belongs to the current student
+                    if (rc && rc.length > 0) {
+                        const other = rc.find(r => r.id !== studentId);
+                        if (other) return studentController.errorMessage(res, 400, { message: 'Email or username already in use', success: false });
+                        // otherwise the only match is the current student -> allow
+                    }
                     runChecks(i+1);
                 });
             };

@@ -9,7 +9,9 @@ const server = express();
 
 server.use(cors({
     origin: "http://localhost:5173",
-    credentials: true
+    credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    methods: ['GET','POST','PUT','DELETE','OPTIONS']
 }));
 server.use(express.json());
 server.use(cookieParser());
@@ -38,6 +40,15 @@ server.listen(3000, () => {
                 db.query(sql, (err) => {
                     if (err) console.warn('Error running reports_table.sql:', err.message || err);
                     else console.log('Reports table ensured');
+                });
+            }
+            // run scholarship applications table migration if present
+            const appSql = path.join(__dirname, 'database', 'scholarship_applications_table.sql');
+            if (fs.existsSync(appSql)) {
+                const sql2 = fs.readFileSync(appSql, 'utf8');
+                db.query(sql2, (err) => {
+                    if (err) console.warn('Error running scholarship_applications_table.sql:', err.message || err);
+                    else console.log('Scholarship applications table ensured');
                 });
             }
         } catch (e) {

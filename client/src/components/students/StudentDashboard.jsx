@@ -16,6 +16,8 @@ const StudentDashboard = () => {
   const [profileForm, setProfileForm] = useState({ name: '', email: '', username: '' });
   const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
   const [showChangePassword, setShowChangePassword] = useState(false);
+  const [showApplyModal, setShowApplyModal] = useState(false);
+  const [selectedScholarship, setSelectedScholarship] = useState(null);
 
   useEffect(() => {
     fetchScholarships();
@@ -138,6 +140,11 @@ const StudentDashboard = () => {
     try {
       const res = await API.put('/students/profile', profileForm);
       if (res.data && res.data.success) {
+        // update stored token if server returned a new one (username changed)
+        if (res.data.token) {
+          try { localStorage.setItem('student_token', res.data.token); } catch (e) { /* ignore */ }
+        }
+
         showToast('Profile updated', 'success');
         // refresh profile
         await fetchStudentProfile();
@@ -388,6 +395,7 @@ const StudentDashboard = () => {
               )}
 
               <button 
+                onClick={() => { setSelectedScholarship(scholarship); setShowApplyModal(true); }}
                 className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white font-semibold py-3 px-4 rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all duration-200 shadow-md hover:shadow-lg"
                 disabled={scholarship.available_slots === 0}
               >
@@ -403,6 +411,24 @@ const StudentDashboard = () => {
           </svg>
           <p className="text-gray-500 text-lg">No scholarships available at the moment</p>
           <p className="text-gray-400 text-sm mt-2">Check back later for new opportunities</p>
+        </div>
+      )}
+      {/* Apply Modal */}
+      {showApplyModal && selectedScholarship && (
+        <div className="fixed inset-0 backdrop-blur-sm bg-green-900/30 flex items-center justify-center z-50 p-4">
+          <div className="bg-green-900 rounded-2xl shadow-2xl border border-green-700 max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-green-800 p-6 border-b border-green-700 flex items-center justify-between">
+              <div>
+                <h3 className="text-2xl font-bold text-green-50">Apply for {selectedScholarship.name}</h3>
+                <p className="text-green-300 text-sm">Attach required documents (COE, TOR, COR)</p>
+              </div>
+              <button onClick={()=>{setShowApplyModal(false); setSelectedScholarship(null);}} className="text-green-300 hover:text-white text-2xl font-bold">×</button>
+            </div>
+
+            <div className="p-6">
+              <ApplyForm scholarship={selectedScholarship} onClose={() => { setShowApplyModal(false); setSelectedScholarship(null); }} />
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -538,6 +564,63 @@ const StudentDashboard = () => {
       </div>
     );
   };
+
+  const ApplyForm = ({ scholarship, onClose }) => {
+    const [files, setFiles] = useState([]);
+    const [submitting, setSubmitting] = useState(false);
+
+    const handleFiles = (e) => {
+      setFiles(Array.from(e.target.files));
+    }
+
+    const handleSubmit = async (e) => {
+      e.preventDefault();
+      if (files.length === 0) {
+        showToast('Please attach at least one document', 'warning');
+        return;
+      }
+
+      const formData = new FormData();
+      files.forEach((f) => formData.append('documents', f));
+
+      try {
+        setSubmitting(true);
+        const token = localStorage.getItem('student_token');
+        if (!token) {
+          showToast('Authentication required. Please login again.', 'error');
+          return;
+        }
+
+        const res = await API.post(`/scholarships/apply/${scholarship.id}`, formData, { headers: { Authorization: `Bearer ${token}` } });
+        if (res.data && res.data.success) {
+          showToast('Application submitted', 'success');
+          onClose();
+        } else {
+          showToast(res.data?.message || 'Failed to submit application', 'error');
+        }
+      } catch (err) {
+        console.error('Apply error', err);
+        showToast(err.response?.data?.message || 'Failed to submit application', 'error');
+      } finally {
+        setSubmitting(false);
+      }
+    }
+
+    return (
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label className="text-green-200 text-sm mb-2 block">Upload Documents</label>
+          <input type="file" accept="image/*,.pdf" multiple onChange={handleFiles} className="w-full text-green-50" />
+          <p className="text-green-300 text-sm mt-2">Accepted: COE, TOR, COR (images or PDF)</p>
+        </div>
+
+        <div className="flex gap-3">
+          <button type="button" onClick={onClose} className="flex-1 bg-gray-600 text-white font-semibold py-3 px-4 rounded-lg">Cancel</button>
+          <button type="submit" disabled={submitting} className="flex-1 bg-green-600 text-white font-semibold py-3 px-4 rounded-lg">{submitting ? 'Submitting...' : 'Submit Application'}</button>
+        </div>
+      </form>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-800 via-green-700 to-emerald-800">

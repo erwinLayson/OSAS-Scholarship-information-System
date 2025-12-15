@@ -39,6 +39,11 @@ const StudentLogin = () => {
         return;
       }
 
+      // store token if returned (fallback for requests where cookies may not be included)
+      if (result.token) {
+        try { localStorage.setItem('student_token', result.token); } catch (e) { /* ignore */ }
+      }
+
       showToast(result.message, 'success');
       setTimeout(() => {
         navigate('/student/dashboard');
