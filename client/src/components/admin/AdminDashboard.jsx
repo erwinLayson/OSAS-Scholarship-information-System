@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AdminLayout from './shareFIles/AdminLayout';
 import API from '../../API/fetchAPI';
+import ActivityChart from './ActivityChart';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -13,6 +14,8 @@ const AdminDashboard = () => {
     approvedApplications: 0
   });
   const [recentApplications, setRecentApplications] = useState([]);
+  const [applicantsList, setApplicantsList] = useState([]);
+  const [chartView, setChartView] = useState('daily'); // daily|weekly|yearly
 
   useEffect(() => {
     fetchDashboardData();
@@ -25,12 +28,93 @@ const AdminDashboard = () => {
         setStats(response.data.stats);
         setRecentApplications(response.data.recentApplications);
       }
+      // fetch full applicants (protected route)
+      try {
+        const appsRes = await API.get('/admin/applicants');
+        if (appsRes && appsRes.data) {
+          setApplicantsList(appsRes.data);
+        }
+      } catch (err) {
+        // ignore if not authorized in current session
+        console.warn('Could not fetch applicants for charts', err.message || err);
+      }
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {
       setLoading(false);
     }
   };
+
+  // helpers to build series
+  const parseAppDate = (app) => {
+    const possible = app.created_at || app.createdDate || app.createdAt || app.date || app.created;
+    const d = possible ? new Date(possible) : new Date();
+    if (isNaN(d)) return new Date();
+    return d;
+  }
+
+  const buildSeries = (view) => {
+    const now = new Date();
+    if (!Array.isArray(applicantsList)) return [];
+
+    if (view === 'daily') {
+      // last 7 days
+      const days = Array.from({length:7}).map((_,i)=>{
+        const dt = new Date(now);
+        dt.setDate(now.getDate() - (6 - i));
+        return dt;
+      });
+      const labels = days.map(d=>`${d.getMonth()+1}/${d.getDate()}`);
+      const counts = labels.map((_,i)=>0);
+
+      applicantsList.forEach(app=>{
+        const d = parseAppDate(app);
+        const key = `${d.getMonth()+1}/${d.getDate()}`;
+        const idx = labels.indexOf(key);
+        if (idx >= 0) counts[idx]++;
+      })
+
+      return labels.map((label,i)=>({ label, value: counts[i]}));
+    }
+
+    if (view === 'weekly') {
+      // last 12 weeks (week start date)
+      const weeks = Array.from({length:12}).map((_,i)=>{
+        const dt = new Date(now);
+        dt.setDate(now.getDate() - (7*(11 - i)));
+        // get Monday as week label
+        const day = dt.getDay();
+        const diff = (day + 6) % 7; // days since Monday
+        dt.setDate(dt.getDate() - diff);
+        return dt;
+      });
+      const labels = weeks.map(d=>`${d.getMonth()+1}/${d.getDate()}`);
+      const counts = labels.map(()=>0);
+      applicantsList.forEach(app=>{
+        const d = parseAppDate(app);
+        // find latest week start that is <= d
+        for (let i = weeks.length -1; i >=0; i--) {
+          if (d >= weeks[i]) { counts[i]++; break; }
+        }
+      })
+      return labels.map((label,i)=>({ label, value: counts[i]}));
+    }
+
+    // yearly - last 5 years
+    const currentYear = now.getFullYear();
+    const years = Array.from({length:5}).map((_,i)=>currentYear - (4 - i));
+    const labels = years.map(y=>String(y));
+    const counts = labels.map(()=>0);
+    applicantsList.forEach(app=>{
+      const d = parseAppDate(app);
+      const y = d.getFullYear();
+      const idx = labels.indexOf(String(y));
+      if (idx >= 0) counts[idx]++;
+    })
+    return labels.map((label,i)=>({ label, value: counts[i]}));
+  }
+
+  const chartData = useMemo(()=> buildSeries(chartView), [applicantsList, chartView]);
 
   const statsDisplay = [
     { 
@@ -173,15 +257,18 @@ const AdminDashboard = () => {
               </div>
             </div>
 
-            {/* Activity Chart Placeholder */}
+            {/* Activity Chart */}
             <div className="bg-green-900 rounded-xl p-6 border border-green-700">
-              <h3 className="text-xl font-bold text-green-50 mb-4">Activity Overview</h3>
-              <div className="h-64 flex items-center justify-center bg-green-800/50 rounded-lg border border-green-700">
-                <div className="text-center">
-                  <p className="text-6xl mb-4">📈</p>
-                  <p className="text-green-300">Chart placeholder</p>
-                  <p className="text-green-400 text-sm">Charts will be implemented later</p>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-bold text-green-50">Activity Overview</h3>
+                <div className="flex items-center gap-2">
+                  <button onClick={()=>setChartView('daily')} className={`px-3 py-1 rounded ${chartView==='daily'?'bg-green-600':'bg-green-800'} text-sm`}>Daily</button>
+                  <button onClick={()=>setChartView('weekly')} className={`px-3 py-1 rounded ${chartView==='weekly'?'bg-green-600':'bg-green-800'} text-sm`}>Weekly</button>
+                  <button onClick={()=>setChartView('yearly')} className={`px-3 py-1 rounded ${chartView==='yearly'?'bg-green-600':'bg-green-800'} text-sm`}>Yearly</button>
                 </div>
+              </div>
+              <div className="h-64 bg-green-800/50 rounded-lg border border-green-700 p-4">
+                <ActivityChart data={chartData} height={200} color="#22c55e" />
               </div>
             </div>
           </div>

@@ -23,6 +23,48 @@ const [studentEditData, setStudentEditData] = useState({
     fetchStudents();
   }, []);
 
+  // Helpers
+  const parseSubjects = (subjectsField) => {
+    if (!subjectsField) return [];
+    if (Array.isArray(subjectsField)) return subjectsField;
+    try {
+      const parsed = typeof subjectsField === 'string' ? JSON.parse(subjectsField) : subjectsField;
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+      // fallback: try to coerce a JSON-like string (robustness)
+      try {
+        const cleaned = String(subjectsField).replace(/([\w\d]+)\s*:/g, '"$1":');
+        const parsed = JSON.parse(cleaned);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (e2) {
+        return [];
+      }
+    }
+  }
+
+  const computeAverage = (subjects) => {
+    const list = parseSubjects(subjects);
+    if (!Array.isArray(list) || list.length === 0) return 'N/A';
+    // collect numeric grades only
+    const numericGrades = list.map(s => {
+      if (s == null) return NaN;
+      // grade may be in property 'grade' or 'score'
+      const raw = s.grade ?? s.score ?? s.value ?? s;
+      if (typeof raw === 'number') return raw;
+      if (typeof raw === 'string') {
+        const cleaned = raw.replace(',', '.').trim();
+        const n = parseFloat(cleaned);
+        return isFinite(n) ? n : NaN;
+      }
+      return NaN;
+    }).filter(n => !isNaN(n));
+
+    if (numericGrades.length === 0) return 'N/A';
+    const total = numericGrades.reduce((a,b)=>a+b, 0);
+    const avg = total / numericGrades.length;
+    return avg.toFixed(2);
+  }
+
   const fetchStudents = async () => {
     try {
       const res = await API.get('/students/student_list');
@@ -41,14 +83,13 @@ const [studentEditData, setStudentEditData] = useState({
     
     if (filterGrade === 'All') return matchesSearch;
     
-    const subjects = student.subjects ? JSON.parse(student.subjects) : [];
-    const total = subjects.reduce((sum, subj) => sum + parseFloat(subj.grade || 0), 0);
-    const average = subjects.length > 0 ? total / subjects.length : 0;
+    const average = computeAverage(student.subjects);
+    const avgNum = average === 'N/A' ? NaN : parseFloat(average);
     
     if (filterGrade === 'Passing') {
-      return matchesSearch && (average >= 10 ? average >= 85 : average <= 2.0);
+      return matchesSearch && (isFinite(avgNum) ? (avgNum >= 10 ? avgNum >= 85 : avgNum <= 2.0) : false);
     } else if (filterGrade === 'Failing') {
-      return matchesSearch && (average >= 10 ? average < 85 : average > 2.0);
+      return matchesSearch && (isFinite(avgNum) ? (avgNum >= 10 ? avgNum < 85 : avgNum > 2.0) : false);
     }
     
     return matchesSearch;
@@ -133,10 +174,9 @@ const [studentEditData, setStudentEditData] = useState({
   const calculateStats = () => {
     const totalStudents = students.length;
     const passingStudents = students.filter(s => {
-      const subjects = s.subjects ? JSON.parse(s.subjects) : [];
-      const total = subjects.reduce((sum, subj) => sum + parseFloat(subj.grade || 0), 0);
-      const average = subjects.length > 0 ? total / subjects.length : 0;
-      return average >= 10 ? average >= 85 : average <= 2.0;
+      const average = computeAverage(s.subjects);
+      const numAvg = average === 'N/A' ? NaN : parseFloat(average);
+      return isFinite(numAvg) ? (numAvg >= 10 ? numAvg >= 85 : numAvg <= 2.0) : false;
     }).length;
     
     const thisWeek = students.filter(s => {
@@ -226,11 +266,9 @@ const [studentEditData, setStudentEditData] = useState({
               <tbody>
                 {filteredStudents.length > 0 ? (
                   filteredStudents.map((student) => {
-                    const subjects = student.subjects ? JSON.parse(student.subjects) : [];
-                    const total = subjects.reduce((sum, subj) => sum + parseFloat(subj.grade || 0), 0);
-                    const average = subjects.length > 0 ? (total / subjects.length).toFixed(2) : 'N/A';
-                    const numAvg = parseFloat(average);
-                    const isPassing = average !== 'N/A' && (numAvg >= 10 ? numAvg >= 85 : numAvg <= 2.0);
+                    const average = computeAverage(student.subjects);
+                    const numAvg = average === 'N/A' ? NaN : parseFloat(average);
+                    const isPassing = (average !== 'N/A') && (numAvg >= 10 ? numAvg >= 85 : numAvg <= 2.0);
 
                     return (
                       <tr key={student.id} className="border-t border-green-800 hover:bg-green-800/50 transition-colors">
@@ -239,7 +277,7 @@ const [studentEditData, setStudentEditData] = useState({
                         <td className="py-4 px-6 text-green-200">{student.email}</td>
                         <td className="py-4 px-6">
                           <span className="px-3 py-1 bg-green-700 text-green-100 rounded-full text-sm">
-                            {subjects.length} {subjects.length === 1 ? 'subject' : 'subjects'}
+                            {Array.isArray(parseSubjects(student.subjects)) ? parseSubjects(student.subjects).length : 0} {Array.isArray(parseSubjects(student.subjects)) && parseSubjects(student.subjects).length === 1 ? 'subject' : 'subjects'}
                           </span>
                         </td>
                         <td className="py-4 px-6">
@@ -412,10 +450,9 @@ const [studentEditData, setStudentEditData] = useState({
                 <div className="bg-green-800 p-6 rounded-lg">
                   <h4 className="text-green-50 text-xl font-bold mb-4">Subjects & Grades</h4>
                   {(() => {
-                    const subjects = selectedStudent.subjects ? JSON.parse(selectedStudent.subjects) : [];
-                    const total = subjects.reduce((sum, subj) => sum + parseFloat(subj.grade || 0), 0);
-                    const average = subjects.length > 0 ? (total / subjects.length).toFixed(2) : 'N/A';
-                    const numAvg = parseFloat(average);
+                    const subjects = parseSubjects(selectedStudent.subjects);
+                    const average = computeAverage(selectedStudent.subjects);
+                    const numAvg = average === 'N/A' ? NaN : parseFloat(average);
                     const isPassing = average !== 'N/A' && (numAvg >= 10 ? numAvg >= 85 : numAvg <= 2.0);
 
                     return (
@@ -426,7 +463,7 @@ const [studentEditData, setStudentEditData] = useState({
                               <div key={idx} className="flex items-center justify-between bg-green-900 p-4 rounded-lg">
                                 <span className="text-green-100 font-medium">{subj.subject}</span>
                                 <span className="text-green-50 text-lg font-bold bg-green-700 px-4 py-1 rounded">
-                                  {subj.grade}
+                                  {subj.grade ?? subj.score ?? subj.value ?? ''}
                                 </span>
                               </div>
                             ))}
