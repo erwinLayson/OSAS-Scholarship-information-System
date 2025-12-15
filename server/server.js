@@ -18,11 +18,13 @@ const applicants = require('./routes/applicantRoutes');
 const adminRoutes = require("./routes/adminRoutes");
 const students = require('./routes/studentRoutes');
 const scholarshipRoutes = require('./routes/scholarshipRoutes');
+const reportRoutes = require('./routes/reportRoutes');
 
 server.use('/applicants', applicants);
 server.use('/admin', adminRoutes);
 server.use('/students', students);
 server.use('/scholarships', scholarshipRoutes);
+server.use('/reports', reportRoutes);
 
 server.listen(3000, () => {
     console.log("server is running in http://localhost:3000");

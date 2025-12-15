@@ -97,8 +97,25 @@ const Reports = () => {
   ];
 
   const handleGenerateReport = () => {
-    // Report generation logic here
-    console.log('Generating report:', { reportType, dateFrom, dateTo, status });
+    // Call server to generate CSV and download
+    (async () => {
+      try {
+        const res = await API.post('/reports/generate', { reportType, dateFrom, dateTo, status }, { responseType: 'blob' });
+        const blob = new Blob([res.data], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const filename = `report-${reportType}-${Date.now()}.csv`;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+      } catch (err) {
+        console.error('Failed to generate report', err);
+        alert('Failed to generate report. Make sure you are authenticated as admin.');
+      }
+    })();
   };
 
   const handleDownloadReport = (reportId) => {
