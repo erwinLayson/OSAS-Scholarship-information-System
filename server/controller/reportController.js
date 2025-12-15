@@ -33,7 +33,8 @@ class ReportController {
       } else if (reportType === 'scholarships') {
         sql = 'SELECT * FROM scholarships';
         if (hasDateRange) sql += ' WHERE DATE(created_at) BETWEEN ? AND ?', params.push(dateFrom, dateTo);
-        if (status) {
+        // Only apply status filter when a specific status is selected (not 'All')
+        if (status && String(status).toLowerCase() !== 'all') {
           sql += hasDateRange ? ' AND status = ?' : ' WHERE status = ?';
           params.push(status);
         }
