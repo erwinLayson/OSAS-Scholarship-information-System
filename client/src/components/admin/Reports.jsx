@@ -81,36 +81,16 @@ const Reports = () => {
     { value: 'academic', label: 'Academic Performance Report', icon: '📊' },
   ];
 
-  // Mock recent reports
-  const recentReports = [
-    {
-      id: 1,
-      name: 'Student Records - November 2025',
-      type: 'Students',
-      generatedBy: 'Admin User',
-      date: '2025-12-07',
-      size: '2.4 MB',
-      status: 'Ready'
-    },
-    {
-      id: 2,
-      name: 'Scholarship Applications Q4 2025',
-      type: 'Applications',
-      generatedBy: 'Admin User',
-      date: '2025-12-05',
-      size: '1.8 MB',
-      status: 'Ready'
-    },
-    {
-      id: 3,
-      name: 'Financial Report - 2025',
-      type: 'Financial',
-      generatedBy: 'Admin User',
-      date: '2025-12-01',
-      size: '3.2 MB',
-      status: 'Ready'
-    }
-  ];
+  const recentReports = recentReportsData && recentReportsData.length > 0 ? recentReportsData.map(r => ({
+    id: r.id,
+    name: r.name,
+    type: r.type,
+    generatedBy: r.generated_by,
+    date: r.created_at,
+    size: r.size_bytes ? `${(r.size_bytes/1024/1024).toFixed(2)} MB` : '0 MB',
+    status: r.status || 'Ready',
+    filename: r.filename
+  })) : [];
 
   const handleGenerateReport = () => {
     // Call server to generate CSV and download
@@ -127,6 +107,19 @@ const Reports = () => {
         a.click();
         a.remove();
         window.URL.revokeObjectURL(url);
+        // refresh recent and summary
+        try {
+          const recentRes = await API.get('/reports/recent?limit=6');
+          if (recentRes.data && recentRes.data.success) setRecentReportsData(recentRes.data.data);
+        } catch (err) {
+          console.warn('Could not fetch recent reports after generation', err.message || err);
+        }
+        try {
+          const summaryRes2 = await API.get('/reports/summary');
+          if (summaryRes2.data && summaryRes2.data.success) setSummary(summaryRes2.data.data);
+        } catch (err) {
+          console.warn('Could not fetch summary after generation', err.message || err);
+        }
       } catch (err) {
         console.error('Failed to generate report', err);
         alert('Failed to generate report. Make sure you are authenticated as admin.');
@@ -134,15 +127,42 @@ const Reports = () => {
     })();
   };
 
-  const handleDownloadReport = (reportId) => {
-    // Download logic here
-    console.log('Downloading report:', reportId);
+  const handleDownloadReport = async (reportId, filename) => {
+    try {
+      const res = await API.get(`/reports/download/${reportId}`, { responseType: 'blob' });
+      const blob = new Blob([res.data], { type: res.headers['content-type'] || 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename || `report-${reportId}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Error downloading report', err);
+      alert('Failed to download report');
+    }
   };
 
   const handleDeleteReport = (reportId) => {
     if (!confirm('Are you sure you want to delete this report?')) return;
-    // Delete logic here
-    console.log('Deleting report:', reportId);
+    (async () => {
+      try {
+        const res = await API.delete(`/reports/${reportId}`);
+        if (res.data && res.data.success) {
+          alert('Report deleted');
+          // refresh recent and summary
+          const recentRes = await API.get('/reports/recent?limit=6');
+          if (recentRes.data && recentRes.data.success) setRecentReportsData(recentRes.data.data);
+          const summaryRes = await API.get('/reports/summary');
+          if (summaryRes.data && summaryRes.data.success) setSummary(summaryRes.data.data);
+        }
+      } catch (err) {
+        console.error('Failed to delete report', err);
+        alert('Failed to delete report');
+      }
+    })();
   };
 
   return (
@@ -361,7 +381,7 @@ const Reports = () => {
                     <td className="py-4 px-6">
                       <div className="flex gap-2">
                         <button
-                          onClick={() => handleDownloadReport(report.id)}
+                          onClick={() => handleDownloadReport(report.id, report.filename)}
                           className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-500 transition-colors text-sm font-medium flex items-center gap-1"
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -49,6 +49,16 @@ class Reports {
     const sql = `SELECT id,name,type,generated_by,filename,size_bytes,status,created_at FROM reports ORDER BY created_at DESC LIMIT ?`;
     db.query(sql, [limit], callback);
   }
+
+  static getById(id, callback) {
+    const sql = `SELECT * FROM reports WHERE id = ? LIMIT 1`;
+    db.query(sql, [id], callback);
+  }
+
+  static deleteById(id, callback) {
+    const sql = `DELETE FROM reports WHERE id = ?`;
+    db.query(sql, [id], callback);
+  }
 }
 
 module.exports = Reports;

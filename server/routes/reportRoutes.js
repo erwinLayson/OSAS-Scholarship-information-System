@@ -10,4 +10,8 @@ router.post('/generate', authenticateAdmin, ReportController.generateReport);
 router.get('/summary', authenticateAdmin, ReportController.getSummary);
 router.get('/recent', authenticateAdmin, ReportController.getRecent);
 
+// Download and delete generated reports
+router.get('/download/:id', authenticateAdmin, ReportController.downloadReport);
+router.delete('/:id', authenticateAdmin, ReportController.deleteReport);
+
 module.exports = router;

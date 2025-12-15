@@ -1,5 +1,7 @@
 const db = require('../config/database');
 const Reports = require('../model/reportModel');
+const fs = require('fs');
+const path = require('path');
 
 function formatCSV(rows, headers) {
   const escape = (v) => {
@@ -100,16 +102,24 @@ class ReportController {
         const csv = formatCSV(rows, headers);
         const filename = `report-${reportType}-${Date.now()}.csv`;
 
-        // record report metadata
+        // write CSV file to disk and record report metadata
         try {
-          const size_bytes = Buffer.byteLength(csv, 'utf8');
-          const generated_by = req.user ? (req.user.username || req.user) : 'admin';
-          Reports.create({ name: filename, type: reportType, generated_by, filename, size_bytes, status: 'Ready' }, (err) => {
-            if (err) console.warn('Failed to record report metadata', err);
-            // continue to send CSV regardless
-            res.setHeader('Content-Type', 'text/csv');
-            res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-            res.send(csv);
+          const dir = path.join(__dirname, '..', 'generated_reports');
+          fs.mkdirSync(dir, { recursive: true });
+          const filepath = path.join(dir, filename);
+          fs.writeFile(filepath, csv, 'utf8', (writeErr) => {
+            const size_bytes = Buffer.byteLength(csv, 'utf8');
+            const generated_by = req.user ? (req.user.username || req.user) : 'admin';
+
+            if (writeErr) console.warn('Failed to write report file', writeErr);
+
+            Reports.create({ name: filename, type: reportType, generated_by, filename, size_bytes, status: 'Ready' }, (err) => {
+              if (err) console.warn('Failed to record report metadata', err);
+              // send CSV back to client
+              res.setHeader('Content-Type', 'text/csv');
+              res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+              res.send(csv);
+            });
           });
         } catch (e) {
           console.warn('Error recording report', e);
@@ -122,6 +132,37 @@ class ReportController {
       console.error(error);
       return res.status(500).json({ message: 'Internal server error', success: false, error });
     }
+  }
+
+  static async downloadReport(req, res) {
+    const id = req.params.id;
+    Reports.getById(id, (err, results) => {
+      if (err) return res.status(500).json({ message: 'Internal server error', success: false, error: err });
+      if (!results || !results[0]) return res.status(404).json({ message: 'Report not found', success: false });
+      const report = results[0];
+      const filepath = path.join(__dirname, '..', 'generated_reports', report.filename);
+      fs.access(filepath, fs.constants.R_OK, (accessErr) => {
+        if (accessErr) return res.status(404).json({ message: 'Report file not found', success: false });
+        res.download(filepath, report.filename);
+      });
+    });
+  }
+
+  static async deleteReport(req, res) {
+    const id = req.params.id;
+    Reports.getById(id, (err, results) => {
+      if (err) return res.status(500).json({ message: 'Internal server error', success: false, error: err });
+      if (!results || !results[0]) return res.status(404).json({ message: 'Report not found', success: false });
+      const report = results[0];
+      const filepath = path.join(__dirname, '..', 'generated_reports', report.filename);
+      fs.unlink(filepath, (unlinkErr) => {
+        // ignore file unlink errors and proceed to delete DB row
+        Reports.deleteById(id, (delErr, delRes) => {
+          if (delErr) return res.status(500).json({ message: 'Failed to delete report', success: false, error: delErr });
+          return res.status(200).json({ message: 'Report deleted', success: true });
+        });
+      });
+    });
   }
 
   static async getSummary(req, res) {
