@@ -110,35 +110,56 @@ class ScholarshipApplicationController {
     const { status } = req.body;
     if (!status) return res.status(400).json({ message: 'Status required', success: false });
 
+    const { reduceAvailableSlots } = require('../model/scholarshipSlotUtils');
+
     ScholarshipApplication.getById(id, (err, rows) => {
       if (err) return res.status(500).json({ message: 'Internal server error', success: false, error: err });
       if (!rows || rows.length === 0) return res.status(404).json({ message: 'Application not found', success: false });
+      const app = rows[0];
+      const prevStatus = app.status;
 
       ScholarshipApplication.updateStatus(id, status, (uErr) => {
         if (uErr) return res.status(500).json({ message: 'Failed to update status', success: false, error: uErr });
-        // send notification email to applicant
-        try {
-          const to = app.email || app.email;
-          const scholarshipName = app.scholarship_name || 'the scholarship';
-          if (status === 'Approved') {
-            sendScholarshipMail(
-              'Scholarship Application Approved',
-              to,
-              `Congratulations! Your application for ${scholarshipName} has been approved.`
-            );
-          } else if (status === 'Rejected') {
-            rejectionMail(
-              to,
-              'Scholarship Application Rejected',
-              'We are sorry to inform you',
-              `Your application for ${scholarshipName} has been rejected.`
-            );
-          }
-        } catch (e) {
-          console.warn('Failed to send status email', e && e.message);
-        }
 
-        return res.status(200).json({ message: 'Status updated', success: true });
+        // If approving and previous status was not approved, reduce available slots
+        if (status === 'Approved' && prevStatus !== 'Approved') {
+          reduceAvailableSlots(app.scholarship_id, 1, (slotErr) => {
+            if (slotErr) {
+              console.error('Failed to reduce scholarship slots:', slotErr);
+              // Continue, but log error
+            }
+            // send notification email to applicant
+            try {
+              const to = app.email || app.email;
+              const scholarshipName = app.scholarship_name || 'the scholarship';
+              sendScholarshipMail(
+                'Scholarship Application Approved',
+                to,
+                `Congratulations! Your application for ${scholarshipName} has been approved.`
+              );
+            } catch (e) {
+              console.warn('Failed to send status email', e && e.message);
+            }
+            return res.status(200).json({ message: 'Status updated', success: true });
+          });
+        } else {
+          // send notification email to applicant
+          try {
+            const to = app.email || app.email;
+            const scholarshipName = app.scholarship_name || 'the scholarship';
+            if (status === 'Rejected') {
+              rejectionMail(
+                to,
+                'Scholarship Application Rejected',
+                'We are sorry to inform you',
+                `Your application for ${scholarshipName} has been rejected.`
+              );
+            }
+          } catch (e) {
+            console.warn('Failed to send status email', e && e.message);
+          }
+          return res.status(200).json({ message: 'Status updated', success: true });
+        }
       });
     });
   }
