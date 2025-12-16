@@ -18,6 +18,11 @@ class ScholarshipApplication {
     db.query(query, [scholarship_id], callback);
   }
 
+  static getByStudentAndScholarship(student_id, scholarship_id, callback) {
+    const query = 'SELECT * FROM scholarship_applications WHERE student_id = ? AND scholarship_id = ? LIMIT 1';
+    db.query(query, [student_id, scholarship_id], callback);
+  }
+
   static getById(id, callback) {
     const query = `SELECT a.*, s.name AS scholarship_name, st.name AS student_name, st.email AS email, st.subjects AS subjects
                    FROM scholarship_applications a
