@@ -75,6 +75,27 @@ class ScholarshipApplicationController {
     });
   }
 
+  static listByStudent(req, res) {
+    const student = req.user;
+    if (!student || !student.id) return res.status(401).json({ message: 'Authentication required', success: false });
+
+    ScholarshipApplication.getByStudent(student.id, (err, rows) => {
+      if (err) {
+        console.error('Error fetching student applications:', err);
+        return res.status(500).json({ message: 'Internal server error', success: false, error: err });
+      }
+
+      // parse documents JSON safely
+      const parsed = (rows || []).map(r => {
+        let docs = r.documents || r.documents;
+        try { if (typeof docs === 'string') docs = JSON.parse(docs); } catch (e) { docs = docs || []; }
+        return { ...r, documents: docs };
+      });
+
+      return res.status(200).json({ message: 'Student applications retrieved', success: true, data: parsed });
+    });
+  }
+
   static getById(req, res) {
     const id = req.params.id;
     ScholarshipApplication.getById(id, (err, rows) => {

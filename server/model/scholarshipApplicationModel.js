@@ -9,7 +9,13 @@ class ScholarshipApplication {
   }
 
   static getByStudent(student_id, callback) {
-    const query = 'SELECT * FROM scholarship_applications WHERE student_id = ? ORDER BY created_at DESC';
+    const query = `SELECT a.*, s.name AS scholarship_name, s.amount AS scholarship_amount, s.status AS scholarship_status,
+                   st.name AS student_name, st.email AS email
+                   FROM scholarship_applications a
+                   LEFT JOIN scholarships s ON a.scholarship_id = s.id
+                   LEFT JOIN students st ON a.student_id = st.id
+                   WHERE a.student_id = ?
+                   ORDER BY a.created_at DESC`;
     db.query(query, [student_id], callback);
   }
 

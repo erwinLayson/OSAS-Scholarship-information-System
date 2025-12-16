@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API from '../../API/fetchAPI';
 import { useToast } from '../../hooks/useToast';
@@ -20,11 +20,26 @@ const StudentDashboard = () => {
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [showApplyModal, setShowApplyModal] = useState(false);
   const [selectedScholarship, setSelectedScholarship] = useState(null);
+  const [studentApplications, setStudentApplications] = useState([]);
+  const [appDetailsModalVisible, setAppDetailsModalVisible] = useState(false);
+  const [selectedApplicationDetail, setSelectedApplicationDetail] = useState(null);
 
   useEffect(() => {
     fetchScholarships();
     fetchStudentProfile();
+    fetchStudentApplications();
   }, []);
+
+  const fetchStudentApplications = async () => {
+    try {
+      const res = await API.get('/scholarships/my-applications');
+      if (res.data && res.data.success) {
+        setStudentApplications(res.data.data || []);
+      }
+    } catch (err) {
+      console.error('Error fetching student applications', err);
+    }
+  };
 
   const fetchScholarships = async () => {
     try {
@@ -123,6 +138,7 @@ const StudentDashboard = () => {
     { id: 'dashboard', name: 'Dashboard', icon: '📊' },
     { id: 'scholarships', name: 'Scholarships', icon: '💰' },
     { id: 'grades', name: 'My Grades', icon: '📚' },
+    { id: 'applications', name: 'Applications', icon: '📝' },
     { id: 'profile', name: 'Profile', icon: '👤' },
   ];
 
@@ -136,6 +152,8 @@ const StudentDashboard = () => {
         return renderDashboardView();
       case 'scholarships':
         return renderScholarshipsView();
+      case 'applications':
+        return renderApplicationsView();
       case 'grades':
         return renderGradesView();
       case 'profile':
@@ -443,6 +461,105 @@ const StudentDashboard = () => {
     </div>
   );
 
+  const renderApplicationsView = () => (
+    <div className="bg-white rounded-2xl shadow-2xl p-8 border border-green-200">
+      <h3 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+        <svg className="w-6 h-6 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-6a2 2 0 012-2h2a2 2 0 012 2v6m-6 0h6" />
+        </svg>
+        My Applications
+      </h3>
+
+      {studentApplications.length === 0 ? (
+        <div className="text-center py-12">
+          <p className="text-gray-500">You have not applied to any scholarships yet.</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {studentApplications.map(app => (
+            <div key={app.id} className="bg-gray-50 p-4 rounded-lg flex items-center justify-between">
+              <div>
+                <div className="text-lg font-semibold text-gray-800">{app.scholarship_name || `Scholarship #${app.scholarship_id}`}</div>
+                <div className="text-sm text-gray-500">Applied on: {new Date(app.created_at).toLocaleString()}</div>
+                <div className="text-sm text-gray-500">Status: <span className={`font-semibold ${app.status === 'Approved' ? 'text-green-600' : app.status === 'Rejected' ? 'text-red-600' : 'text-yellow-600'}`}>{app.status}</span></div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="text-sm text-gray-600">Docs: {Array.isArray(app.documents) ? app.documents.length : 0}</div>
+                <button type="button" onClick={() => { setSelectedApplicationDetail(app); setAppDetailsModalVisible(true); }} className="px-4 py-2 bg-green-600 text-white rounded">View</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Application Details Modal */}
+      <ApplicationDetailsModal
+        visible={appDetailsModalVisible}
+        onClose={() => setAppDetailsModalVisible(false)}
+        app={selectedApplicationDetail}
+      />
+    </div>
+  );
+
+  const showApplicationDetails = (app) => {
+    setSelectedApplicationDetail(app);
+    setAppDetailsModalVisible(true);
+  };
+
+  const ApplicationDetailsModal = ({ visible, onClose, app }) => {
+    if (!visible || !app) return null;
+
+    const docs = Array.isArray(app.documents) ? app.documents : [];
+    return (
+      <div className="fixed inset-0 backdrop-blur-sm bg-black/40 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-2xl shadow-2xl border border-green-200 max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="sticky top-0 bg-white p-6 border-b flex items-center justify-between">
+            <div>
+              <h3 className="text-2xl font-bold text-gray-800">{app.scholarship_name || `Scholarship #${app.scholarship_id}`}</h3>
+              <p className="text-sm text-gray-600">Applied on: {new Date(app.created_at).toLocaleString()}</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className={`px-3 py-1 rounded-full text-sm font-semibold ${app.status === 'Approved' ? 'bg-green-100 text-green-700' : app.status === 'Rejected' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                {app.status}
+              </span>
+              <button onClick={onClose} className="text-gray-600 hover:text-gray-800 text-2xl font-bold">×</button>
+            </div>
+          </div>
+
+          <div className="p-6 space-y-4">
+            <div>
+              <h4 className="text-sm font-semibold text-gray-700 mb-2">Uploaded Documents</h4>
+              {docs.length === 0 ? (
+                <p className="text-sm text-gray-500">No documents uploaded.</p>
+              ) : (
+                <ul className="space-y-2">
+                  {docs.map((d, i) => {
+                    // normalize path slashes for URL
+                    const normalized = String(d).replace(/\\\\/g, '/').replace(/\\/g, '/');
+                    const url = `${API.defaults.baseURL}/${normalized}`;
+                    const name = normalized.split('/').pop();
+                    return (
+                      <li key={i} className="flex items-center justify-between bg-gray-50 p-3 rounded">
+                        <div className="text-sm text-gray-700">{name}</div>
+                        <div className="flex items-center gap-2">
+                          <a href={url} target="_blank" rel="noreferrer" className="px-3 py-1 bg-green-600 text-white rounded text-sm">Open</a>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+
+            <div className="text-right">
+              <button onClick={onClose} className="px-4 py-2 bg-gray-300 text-gray-800 rounded">Close</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderGradesView = () => (
     <div className="bg-white rounded-2xl shadow-2xl p-8 border border-green-200">
       <div className="flex items-center justify-between mb-6">
@@ -640,6 +757,7 @@ const StudentDashboard = () => {
       setFiles(Array.from(e.target.files));
     }
 
+    const fileInputRef = React.useRef();
     const handleSubmit = async (e) => {
       e.preventDefault();
       if (files.length === 0) {
@@ -661,6 +779,8 @@ const StudentDashboard = () => {
         const res = await API.post(`/scholarships/apply/${scholarship.id}`, formData, { headers: { Authorization: `Bearer ${token}` } });
         if (res.data && res.data.success) {
           showToast('Application submitted', 'success');
+          setFiles([]);
+          if (fileInputRef.current) fileInputRef.current.value = '';
           onClose();
         } else {
           showToast(res.data?.message || 'Failed to submit application', 'error');
@@ -677,8 +797,26 @@ const StudentDashboard = () => {
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="text-green-200 text-sm mb-2 block">Upload Documents</label>
-          <input type="file" accept="image/*,.pdf" multiple onChange={handleFiles} className="w-full text-green-50" />
-          <p className="text-green-300 text-sm mt-2">Accepted: COE, TOR, COR (images or PDF)</p>
+          <input
+            type="file"
+            accept="image/*,.pdf"
+            multiple
+            onChange={handleFiles}
+            className="w-full text-green-50"
+            aria-label="Choose one or more files"
+            ref={fileInputRef}
+          />
+          <p className="text-green-300 text-sm mt-2">
+            Accepted: COE, TOR, COR (images or PDF). You can select multiple files.<br />
+            <span className="text-green-200">Tip: Hold Ctrl (Windows) or Cmd (Mac) to select multiple files at once.</span>
+          </p>
+          {files.length > 0 && (
+            <ul className="mt-2 text-green-100 text-xs list-disc list-inside">
+              {files.map((file, idx) => (
+                <li key={idx}>{file.name}</li>
+              ))}
+            </ul>
+          )}
         </div>
 
         <div className="flex gap-3">

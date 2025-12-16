@@ -20,6 +20,9 @@ scholarshipRoutes.get('/applications/:id', authenticateAdmin, ScholarshipApplica
 scholarshipRoutes.put('/applications/:id/status', authenticateAdmin, ScholarshipApplicationController.updateStatus);
 scholarshipRoutes.get('/applications/:id/document/:index', authenticateAdmin, ScholarshipApplicationController.downloadDocument);
 
+// Student: view their applications
+scholarshipRoutes.get('/my-applications', authenticateStudent, ScholarshipApplicationController.listByStudent);
+
 // Scholarship CRUD
 scholarshipRoutes.get('/:id', authenticateAdmin, ScholarshipController.getById);
 scholarshipRoutes.put('/edit/:id', authenticateAdmin, ScholarshipController.update);
