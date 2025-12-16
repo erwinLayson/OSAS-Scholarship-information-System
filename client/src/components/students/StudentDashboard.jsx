@@ -13,7 +13,9 @@ const StudentDashboard = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeView, setActiveView] = useState('dashboard');
   const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [isEditingGrades, setIsEditingGrades] = useState(false);
   const [profileForm, setProfileForm] = useState({ name: '', email: '', username: '' });
+  const [editableSubjects, setEditableSubjects] = useState([]);
   const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [showApplyModal, setShowApplyModal] = useState(false);
@@ -43,6 +45,13 @@ const StudentDashboard = () => {
       const response = await API.get('/students/profile');
       if (response.data.success) {
         setStudentData(response.data.data);
+        // initialize editable subjects
+        try {
+          const s = typeof response.data.data.subjects === 'string' ? JSON.parse(response.data.data.subjects) : response.data.data.subjects;
+          setEditableSubjects(Array.isArray(s) ? s : []);
+        } catch (e) {
+          setEditableSubjects([]);
+        }
         setProfileForm({ name: response.data.data.name || '', email: response.data.data.email || '', username: response.data.data.username || '' });
       }
     } catch (error) {
@@ -436,12 +445,48 @@ const StudentDashboard = () => {
 
   const renderGradesView = () => (
     <div className="bg-white rounded-2xl shadow-2xl p-8 border border-green-200">
-      <h3 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
-        <svg className="w-6 h-6 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-        </svg>
-        Subjects & Grades
-      </h3>
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-2xl font-bold text-gray-800 flex items-center">
+          <svg className="w-6 h-6 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+          </svg>
+          Subjects & Grades
+        </h3>
+        <div className="flex items-center gap-2">
+          {!isEditingGrades ? (
+            <button onClick={() => { setIsEditingGrades(true); setEditableSubjects(subjects); }} className="px-4 py-2 bg-green-600 text-white rounded">Edit Grades</button>
+          ) : (
+            <>
+              <button onClick={async () => {
+                try {
+                  const cleaned = editableSubjects.map(s => ({ subject: String(s.subject || '').trim(), grade: String(s.grade || '').trim() }));
+                  for (const s of cleaned) {
+                    if (!s.subject) { showToast('Subject name cannot be empty', 'warning'); return; }
+                    if (!/^\d+(\.\d{1,2})?$/.test(s.grade)) { showToast('Grades must be numeric with up to 2 decimals', 'warning'); return; }
+                    const num = parseFloat(s.grade);
+                    if (isNaN(num) || num > 5) { showToast('Invalid grade value (max 5.00)', 'warning'); return; }
+                    s.grade = num.toFixed(2);
+                  }
+
+                  const payload = { subjects: JSON.stringify(cleaned) };
+                  const res = await API.put('/students/profile', payload);
+                  if (res.data && res.data.success) {
+                    showToast('Grades updated', 'success');
+                    await fetchStudentProfile();
+                    setIsEditingGrades(false);
+                  } else {
+                    showToast(res.data?.message || 'Failed to update grades', 'error');
+                  }
+                } catch (err) {
+                  console.error('Save grades error', err);
+                  showToast(err.response?.data?.message || 'Failed to save grades', 'error');
+                }
+              }} className="px-4 py-2 bg-blue-600 text-white rounded">Save</button>
+              <button onClick={() => { setIsEditingGrades(false); setEditableSubjects(subjects); }} className="px-4 py-2 bg-gray-300 text-gray-800 rounded">Cancel</button>
+            </>
+          )}
+        </div>
+      </div>
       
       {loading ? (
         <div className="text-center py-12">
@@ -450,21 +495,43 @@ const StudentDashboard = () => {
         </div>
       ) : subjects.length > 0 ? (
         <div className="space-y-3">
-          {subjects.map((subject, index) => (
+          {(isEditingGrades ? editableSubjects : subjects).map((subject, index) => (
             <div key={index} className="flex items-center justify-between bg-gray-50 p-4 rounded-lg hover:bg-gray-100 transition-colors">
-              <div className="flex items-center space-x-3">
+              <div className="flex items-center space-x-3 w-2/3">
                 <div className="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center text-white font-bold">
                   {index + 1}
                 </div>
-                <span className="text-gray-800 font-medium text-lg">{subject.subject}</span>
+                {!isEditingGrades ? (
+                  <span className="text-gray-800 font-medium text-lg">{subject.subject}</span>
+                ) : (
+                  <input value={subject.subject} onChange={(e) => {
+                    const val = e.target.value;
+                    setEditableSubjects(prev => prev.map((p, i) => i === index ? { ...p, subject: val } : p));
+                  }} className="w-full px-3 py-2 rounded border" />
+                )}
               </div>
-              <div className="flex items-center space-x-3">
-                <span className="text-2xl font-bold text-green-600 bg-green-100 px-4 py-2 rounded-lg">
-                  {subject.grade}
-                </span>
+              <div className="flex items-center space-x-3 w-1/3 justify-end">
+                {!isEditingGrades ? (
+                  <span className="text-2xl font-bold text-green-600 bg-green-100 px-4 py-2 rounded-lg">{subject.grade}</span>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <input value={subject.grade} inputMode="decimal" onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === '' || /^\d+(\.\d{0,2})?$/.test(val)) {
+                        setEditableSubjects(prev => prev.map((p, i) => i === index ? { ...p, grade: val } : p));
+                      }
+                    }} className="w-28 px-3 py-2 rounded border text-right" />
+                    <button onClick={() => setEditableSubjects(prev => prev.filter((_, i) => i !== index))} className="text-red-600">Remove</button>
+                  </div>
+                )}
               </div>
             </div>
           ))}
+          {isEditingGrades && (
+            <div className="mt-4">
+              <button onClick={() => setEditableSubjects(prev => [...prev, { subject: '', grade: '0.00' }])} className="px-4 py-2 bg-green-600 text-white rounded">Add Subject</button>
+            </div>
+          )}
           
           {/* Average Display */}
           <div className="mt-6 pt-6 border-t border-gray-200">
