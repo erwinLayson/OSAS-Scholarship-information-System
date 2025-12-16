@@ -67,6 +67,7 @@ const ScholarshipApplications = () => {
   const { toasts, showToast, hideToast } = useToast();
   const [showDocsModal, setShowDocsModal] = useState(false);
   const [selectedApp, setSelectedApp] = useState(null);
+  const [statusFilter, setStatusFilter] = useState('All');
 
   useEffect(() => {
     (async () => {
@@ -96,9 +97,27 @@ const ScholarshipApplications = () => {
     }
   };
 
+  // Filter applications by status
+  const filteredApplications = statusFilter === 'All'
+    ? applications
+    : applications.filter(app => app.status === statusFilter);
+
   return (
     <AdminLayout activeMenu="scholarship_applications" title="Scholarship Applications" subtitle="Manage scholarship applications from students">
       <div className="max-w-7xl mx-auto">
+        <div className="flex items-center justify-end mb-4">
+          <label className="text-green-100 font-semibold mr-2">Filter by Status:</label>
+          <select
+            value={statusFilter}
+            onChange={e => setStatusFilter(e.target.value)}
+            className="px-3 py-2 rounded border border-green-600 bg-green-900 text-green-50"
+          >
+            <option value="All">All</option>
+            <option value="Pending">Pending</option>
+            <option value="Approved">Approved</option>
+            <option value="Rejected">Rejected</option>
+          </select>
+        </div>
         <div className="bg-green-900 rounded-xl shadow-2xl border border-green-700 overflow-hidden mb-6">
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -113,7 +132,7 @@ const ScholarshipApplications = () => {
                 </tr>
               </thead>
               <tbody>
-                {applications.length > 0 ? applications.map(app => (
+                {filteredApplications.length > 0 ? filteredApplications.map(app => (
                   <tr key={app.id} className="border-t border-green-800 hover:bg-green-800/50 transition-colors">
                     <td className="py-4 px-6 text-green-50">{app.student_name || app.student_name}</td>
                     <td className="py-4 px-6 text-green-200">{app.email || ''}</td>
