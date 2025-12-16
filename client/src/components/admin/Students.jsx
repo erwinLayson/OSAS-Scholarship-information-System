@@ -258,6 +258,7 @@ const [studentEditData, setStudentEditData] = useState({
                   <th className="text-left py-4 px-6 text-green-100 font-semibold">Student Name</th>
                   <th className="text-left py-4 px-6 text-green-100 font-semibold">Email</th>
                   <th className="text-left py-4 px-6 text-green-100 font-semibold">Subjects</th>
+                  <th className="text-left py-4 px-6 text-green-100 font-semibold">Status</th>
                   <th className="text-left py-4 px-6 text-green-100 font-semibold">Average</th>
                   <th className="text-left py-4 px-6 text-green-100 font-semibold">Date Approve</th>
                   <th className="text-left py-4 px-6 text-green-100 font-semibold">Actions</th>
@@ -279,6 +280,18 @@ const [studentEditData, setStudentEditData] = useState({
                           <span className="px-3 py-1 bg-green-700 text-green-100 rounded-full text-sm">
                             {Array.isArray(parseSubjects(student.subjects)) ? parseSubjects(student.subjects).length : 0} {Array.isArray(parseSubjects(student.subjects)) && parseSubjects(student.subjects).length === 1 ? 'subject' : 'subjects'}
                           </span>
+                        </td>
+                        {/* Status column */}
+                        <td className="py-4 px-6">
+                          {(() => {
+                            const subjects = parseSubjects(student.subjects);
+                            const totalUnits = subjects.length > 0 ? subjects.reduce((sum, subj) => sum + (parseFloat(subj.unit) || 0), 0) : 0;
+                            if (totalUnits >= 24) {
+                              return <span className="px-3 py-1 rounded bg-green-600 text-white text-xs font-bold">Regular</span>;
+                            } else {
+                              return <span className="px-3 py-1 rounded bg-yellow-500 text-white text-xs font-bold">Irregular</span>;
+                            }
+                          })()}
                         </td>
                         <td className="py-4 px-6">
                           <span className="text-lg font-semibold text-green-50">{average}</span>

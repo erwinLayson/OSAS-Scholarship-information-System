@@ -194,6 +194,8 @@ const Applications = () => {
                   <th className="text-left py-4 px-6 text-green-100 font-semibold">Student Name</th>
                   <th className="text-left py-4 px-6 text-green-100 font-semibold">Email</th>
                   <th className="text-left py-4 px-6 text-green-100 font-semibold">Subjects</th>
+                  <th className="text-left py-4 px-6 text-green-100 font-semibold">Total Units</th>
+                  <th className="text-left py-4 px-6 text-green-100 font-semibold">Status</th>
                   <th className="text-left py-4 px-6 text-green-100 font-semibold">Average Grade</th>
                   <th className="text-left py-4 px-6 text-green-100 font-semibold">Registered Date</th>
                   <th className="text-left py-4 px-6 text-green-100 font-semibold">Action</th>
@@ -254,7 +256,7 @@ const Applications = () => {
                             {subjects.length > 0 ? (
                               subjects.slice(0, 3).map((subj, idx) => (
                                 <span key={idx} className="px-2 py-1 bg-green-700 text-green-100 rounded text-xs">
-                                  {subj.subject}: {subj.grade}
+                                  {subj.subject}: {subj.grade} <span className="text-green-200">({subj.unit}u)</span>
                                 </span>
                               ))
                             ) : (
@@ -266,6 +268,21 @@ const Applications = () => {
                               </span>
                             )}
                           </div>
+                        </td>
+                        {/* Total Units */}
+                        <td className="py-4 px-6 text-green-200 font-bold">
+                          {subjects.length > 0 ? subjects.reduce((sum, subj) => sum + (parseFloat(subj.unit) || 0), 0) : 0}
+                        </td>
+                        {/* Regular/Irregular Status */}
+                        <td className="py-4 px-6">
+                          {(() => {
+                            const totalUnits = subjects.length > 0 ? subjects.reduce((sum, subj) => sum + (parseFloat(subj.unit) || 0), 0) : 0;
+                            if (totalUnits >= 24) {
+                              return <span className="px-3 py-1 rounded bg-green-600 text-white text-xs font-bold">Regular</span>;
+                            } else {
+                              return <span className="px-3 py-1 rounded bg-yellow-500 text-white text-xs font-bold">Irregular</span>;
+                            }
+                          })()}
                         </td>
                         <td className="py-4 px-6">
                           <div className="flex items-center gap-2">

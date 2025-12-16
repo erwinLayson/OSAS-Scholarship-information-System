@@ -13,6 +13,7 @@ const ApplicantRegister = () => {
   });
   const [subjectInput, setSubjectInput] = useState('');
   const [gradeInput, setGradeInput] = useState('');
+  const [unitInput, setUnitInput] = useState('');
   const [subjectList, setSubjectList] = useState([]);
 
   const handleGradeInputChange = (e) => {
@@ -41,7 +42,7 @@ const ApplicantRegister = () => {
   };
 
   const handleAddSubject = () => {
-    if (subjectInput.trim() === '' || gradeInput.trim() === '') return;
+    if (subjectInput.trim() === '' || gradeInput.trim() === '' || unitInput.trim() === '') return;
 
     const raw = gradeInput.trim();
     if (!/^\d+(\.\d{0,2})?$/.test(raw)) {
@@ -56,9 +57,10 @@ const ApplicantRegister = () => {
 
     const gradeFormatted = num.toFixed(2); // ensure two decimal places like 3.00
 
-    setSubjectList(prev => [...prev, { subject: subjectInput.trim(), grade: gradeFormatted }]);
+    setSubjectList(prev => [...prev, { subject: subjectInput.trim(), grade: gradeFormatted, unit: unitInput.trim() }]);
     setSubjectInput('');
     setGradeInput('');
+    setUnitInput('');
   };
 
   const handleRemoveSubject = (index) => {
@@ -162,7 +164,7 @@ const ApplicantRegister = () => {
             {/* Subjects */}
             <div>
               <label htmlFor="subjects" className="block text-sm font-semibold text-gray-700 mb-2">
-                Subjects & Grades <span className="text-red-500">*</span>
+                Subjects, Grades & Units <span className="text-red-500">*</span>
               </label>
               <div className="flex gap-2">
                 <div className="relative flex-1">
@@ -181,7 +183,7 @@ const ApplicantRegister = () => {
                     placeholder="Enter subject name"
                   />
                 </div>
-                <div className="relative w-32">
+                <div className="relative w-24">
                   <input
                     type="text"
                     inputMode="decimal"
@@ -192,6 +194,16 @@ const ApplicantRegister = () => {
                     placeholder="Grade"
                   />
                 </div>
+                <div className="relative w-20">
+                  <input
+                    type="text"
+                    value={unitInput}
+                    onChange={e => setUnitInput(e.target.value)}
+                    onKeyPress={e => e.key === 'Enter' && (e.preventDefault(), handleAddSubject())}
+                    className="w-full px-4 py-3 bg-white text-gray-800 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition duration-200 placeholder-gray-400"
+                    placeholder="Unit"
+                  />
+                </div>
                 <button
                   type="button"
                   onClick={handleAddSubject}
@@ -200,7 +212,7 @@ const ApplicantRegister = () => {
                   Add Subject
                 </button>
               </div>
-              <p className="mt-2 text-sm text-gray-600">Enter subject name and grade, then click "Add Subject"</p>
+              <p className="mt-2 text-sm text-gray-600">Enter subject name, grade, and unit, then click "Add Subject"</p>
 
               {/* Display Added Subjects */}
               {subjectList.length > 0 && (
@@ -214,6 +226,7 @@ const ApplicantRegister = () => {
                       >
                         <span className="font-medium">{item.subject}</span>
                         <span className="text-sm bg-green-600 text-white px-2 py-0.5 rounded">{item.grade}</span>
+                        <span className="text-xs bg-green-200 text-green-800 px-2 py-0.5 rounded">{item.unit} unit{item.unit === '1' ? '' : 's'}</span>
                         <button
                           type="button"
                           onClick={() => handleRemoveSubject(index)}
