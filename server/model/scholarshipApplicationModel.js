@@ -40,7 +40,7 @@ class ScholarshipApplication {
   }
 
   static updateStatus(id, status, callback) {
-    const query = 'UPDATE scholarship_applications SET status = ?, updated_at = NOW() WHERE id = ?';
+    const query = 'UPDATE scholarship_applications SET status = ? WHERE id = ?';
     db.query(query, [status, id], callback);
   }
 }

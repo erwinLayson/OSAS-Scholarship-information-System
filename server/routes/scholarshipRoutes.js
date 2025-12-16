@@ -18,6 +18,7 @@ scholarshipRoutes.post('/create', authenticateAdmin, ScholarshipController.creat
 scholarshipRoutes.get('/applications', authenticateAdmin, ScholarshipApplicationController.listAll);
 scholarshipRoutes.get('/applications/:id', authenticateAdmin, ScholarshipApplicationController.getById);
 scholarshipRoutes.put('/applications/:id/status', authenticateAdmin, ScholarshipApplicationController.updateStatus);
+scholarshipRoutes.get('/applications/:id/document/:index', authenticateAdmin, ScholarshipApplicationController.downloadDocument);
 
 // Scholarship CRUD
 scholarshipRoutes.get('/:id', authenticateAdmin, ScholarshipController.getById);

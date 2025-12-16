@@ -68,7 +68,7 @@ const ScholarshipApplications = () => {
                     <td className="py-4 px-6 flex gap-2">
                       <button onClick={() => updateStatus(app.id, 'Approved')} className="px-3 py-1 bg-green-600 text-white rounded">Approve</button>
                       <button onClick={() => updateStatus(app.id, 'Rejected')} className="px-3 py-1 bg-red-600 text-white rounded">Reject</button>
-                      <a href={`/${(app.documents && app.documents.length) ? app.documents[0].replace(/\\/g, '/') : ''}`} target="_blank" rel="noreferrer" className="px-3 py-1 bg-blue-600 text-white rounded">Download</a>
+                      <a href={`${API.defaults.baseURL}/scholarships/applications/${app.id}/document/0`} target="_blank" rel="noreferrer" className="px-3 py-1 bg-blue-600 text-white rounded">Download</a>
                     </td>
                   </tr>
                 )) : (

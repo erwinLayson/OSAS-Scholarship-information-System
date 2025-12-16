@@ -2,6 +2,7 @@ const path = require('path');
 const fs = require('fs');
 const ScholarshipApplication = require('../model/scholarshipApplicationModel');
 const { authenticateStudent } = require('../authenticate/auth');
+const { sendScholarshipMail, rejectionMail } = require('./shared/mailer');
 
 class ScholarshipApplicationController {
   // Handles file uploads and creates an application record
@@ -82,8 +83,59 @@ class ScholarshipApplicationController {
 
       ScholarshipApplication.updateStatus(id, status, (uErr) => {
         if (uErr) return res.status(500).json({ message: 'Failed to update status', success: false, error: uErr });
+        // send notification email to applicant
+        try {
+          const to = app.email || app.email;
+          const scholarshipName = app.scholarship_name || 'the scholarship';
+          if (status === 'Approved') {
+            sendScholarshipMail(
+              'Scholarship Application Approved',
+              to,
+              `Congratulations! Your application for ${scholarshipName} has been approved.`
+            );
+          } else if (status === 'Rejected') {
+            rejectionMail(
+              to,
+              'Scholarship Application Rejected',
+              'We are sorry to inform you',
+              `Your application for ${scholarshipName} has been rejected.`
+            );
+          }
+        } catch (e) {
+          console.warn('Failed to send status email', e && e.message);
+        }
+
         return res.status(200).json({ message: 'Status updated', success: true });
       });
+    });
+  }
+
+  static downloadDocument(req, res) {
+    const id = req.params.id;
+    const index = parseInt(req.params.index || '0', 10);
+
+    ScholarshipApplication.getById(id, (err, rows) => {
+      if (err) return res.status(500).json({ message: 'Internal server error', success: false, error: err });
+      if (!rows || rows.length === 0) return res.status(404).json({ message: 'Application not found', success: false });
+
+      const app = rows[0];
+      let docs = app.documents || app.documents;
+      try {
+        if (typeof docs === 'string') docs = JSON.parse(docs);
+      } catch (e) {
+        docs = docs || [];
+      }
+
+      if (!Array.isArray(docs) || docs.length === 0 || index < 0 || index >= docs.length) {
+        return res.status(404).json({ message: 'Document not found', success: false });
+      }
+
+      const docPath = docs[index];
+      const fullPath = path.join(__dirname, '..', docPath);
+
+      if (!fs.existsSync(fullPath)) return res.status(404).json({ message: 'File not found on server', success: false });
+
+      return res.sendFile(fullPath);
     });
   }
 }
