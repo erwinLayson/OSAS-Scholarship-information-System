@@ -532,18 +532,22 @@ const StudentDashboard = () => {
               {docs.length === 0 ? (
                 <p className="text-sm text-gray-500">No documents uploaded.</p>
               ) : (
-                <ul className="space-y-2">
+                <ul className="space-y-4">
                   {docs.map((d, i) => {
                     // normalize path slashes for URL
-                    const normalized = String(d).replace(/\\\\/g, '/').replace(/\\/g, '/');
+                    const normalized = String(d).replace(/\\/g, '/').replace(/\\/g, '/');
                     const url = `${API.defaults.baseURL}/${normalized}`;
                     const name = normalized.split('/').pop();
+                    const ext = name.split('.').pop().toLowerCase();
+                    const isImage = ['jpg','jpeg','png','gif','bmp','webp'].includes(ext);
                     return (
-                      <li key={i} className="flex items-center justify-between bg-gray-50 p-3 rounded">
+                      <li key={i} className="bg-gray-50 p-3 rounded flex flex-col gap-2">
                         <div className="text-sm text-gray-700">{name}</div>
-                        <div className="flex items-center gap-2">
-                          <a href={url} target="_blank" rel="noreferrer" className="px-3 py-1 bg-green-600 text-white rounded text-sm">Open</a>
-                        </div>
+                        {isImage ? (
+                          <img src={url} alt={name} className="max-h-64 max-w-full rounded border border-gray-200 object-contain" style={{background:'#f8fafc'}} />
+                        ) : (
+                          <a href={url} target="_blank" rel="noreferrer" className="px-3 py-1 bg-green-600 text-white rounded text-sm inline-block">Open</a>
+                        )}
                       </li>
                     );
                   })}

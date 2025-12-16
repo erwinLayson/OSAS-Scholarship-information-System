@@ -4,10 +4,69 @@ import API from '../../API/fetchAPI';
 import { useToast } from '../../hooks/useToast';
 import Toast from '../shared/Toast';
 
+// Modal for viewing application documents
+const ApplicationDocumentsModal = ({ visible, onClose, app }) => {
+  if (!visible || !app) return null;
+  let docs = [];
+  try {
+    docs = Array.isArray(app.documents)
+      ? app.documents
+      : typeof app.documents === 'string' ? JSON.parse(app.documents) : [];
+  } catch {
+    docs = [];
+  }
+  return (
+    <div className="fixed inset-0 backdrop-blur-sm bg-black/40 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl border border-green-200 max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="sticky top-0 bg-white p-6 border-b flex items-center justify-between">
+          <div>
+            <h3 className="text-2xl font-bold text-gray-800">Documents for {app.student_name || app.email}</h3>
+            <p className="text-sm text-gray-600">Scholarship: {app.scholarship_name || app.scholarship_id}</p>
+          </div>
+          <button onClick={onClose} className="text-gray-600 hover:text-gray-800 text-2xl font-bold">×</button>
+        </div>
+        <div className="p-6 space-y-4">
+          <div>
+            <h4 className="text-sm font-semibold text-gray-700 mb-2">Uploaded Documents</h4>
+            {docs.length === 0 ? (
+              <p className="text-sm text-gray-500">No documents uploaded.</p>
+            ) : (
+              <ul className="space-y-4">
+                {docs.map((d, i) => {
+                  const normalized = String(d).replace(/\\\\/g, '/').replace(/\\/g, '/');
+                  const url = `${API.defaults.baseURL}/${normalized}`;
+                  const name = normalized.split('/').pop();
+                  const ext = name.split('.').pop().toLowerCase();
+                  const isImage = ['jpg','jpeg','png','gif','bmp','webp'].includes(ext);
+                  return (
+                    <li key={i} className="bg-gray-50 p-3 rounded flex flex-col gap-2">
+                      <div className="text-sm text-gray-700">{name}</div>
+                      {isImage ? (
+                        <img src={url} alt={name} className="max-h-64 max-w-full rounded border border-gray-200 object-contain" style={{background:'#f8fafc'}} />
+                      ) : (
+                        <a href={url} target="_blank" rel="noreferrer" className="px-3 py-1 bg-green-600 text-white rounded text-sm inline-block">Open</a>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+          <div className="text-right">
+            <button onClick={onClose} className="px-4 py-2 bg-gray-300 text-gray-800 rounded">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const ScholarshipApplications = () => {
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(false);
   const { toasts, showToast, hideToast } = useToast();
+  const [showDocsModal, setShowDocsModal] = useState(false);
+  const [selectedApp, setSelectedApp] = useState(null);
 
   useEffect(() => {
     (async () => {
@@ -68,7 +127,7 @@ const ScholarshipApplications = () => {
                     <td className="py-4 px-6 flex gap-2">
                       <button onClick={() => updateStatus(app.id, 'Approved')} className="px-3 py-1 bg-green-600 text-white rounded">Approve</button>
                       <button onClick={() => updateStatus(app.id, 'Rejected')} className="px-3 py-1 bg-red-600 text-white rounded">Reject</button>
-                      <a href={`${API.defaults.baseURL}/scholarships/applications/${app.id}/document/0`} target="_blank" rel="noreferrer" className="px-3 py-1 bg-blue-600 text-white rounded">Download</a>
+                      <button onClick={() => { setSelectedApp(app); setShowDocsModal(true); }} className="px-3 py-1 bg-blue-600 text-white rounded">View</button>
                     </td>
                   </tr>
                 )) : (
@@ -78,6 +137,12 @@ const ScholarshipApplications = () => {
                 )}
               </tbody>
             </table>
+            {/* Documents Modal */}
+            <ApplicationDocumentsModal
+              visible={showDocsModal}
+              onClose={() => setShowDocsModal(false)}
+              app={selectedApp}
+            />
           </div>
         </div>
       </div>

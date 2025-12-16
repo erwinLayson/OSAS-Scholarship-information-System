@@ -24,6 +24,10 @@ const students = require('./routes/studentRoutes');
 const scholarshipRoutes = require('./routes/scholarshipRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 
+
+// Serve uploads directory for document/image access
+server.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 server.use('/applicants', applicants);
 server.use('/admin', adminRoutes);
 server.use('/students', students);
