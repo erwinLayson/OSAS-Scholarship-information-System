@@ -475,9 +475,14 @@ const [studentEditData, setStudentEditData] = useState({
                             {subjects.map((subj, idx) => (
                               <div key={idx} className="flex items-center justify-between bg-green-900 p-4 rounded-lg">
                                 <span className="text-green-100 font-medium">{subj.subject}</span>
-                                <span className="text-green-50 text-lg font-bold bg-green-700 px-4 py-1 rounded">
-                                  {subj.grade ?? subj.score ?? subj.value ?? ''}
-                                </span>
+                                <div className="flex items-center gap-4">
+                                  <span className="text-green-200 text-base font-semibold bg-green-800 px-3 py-1 rounded border border-green-700" title="Unit">
+                                    {subj.unit ? `${subj.unit} unit${parseFloat(subj.unit) > 1 ? 's' : ''}` : '-'}
+                                  </span>
+                                  <span className="text-green-50 text-lg font-bold bg-green-700 px-4 py-1 rounded">
+                                    {subj.grade ?? subj.score ?? subj.value ?? ''}
+                                  </span>
+                                </div>
                               </div>
                             ))}
                             <div className="mt-4 pt-4 border-t border-green-700">

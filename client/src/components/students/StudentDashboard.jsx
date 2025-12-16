@@ -580,13 +580,18 @@ const StudentDashboard = () => {
             <>
               <button onClick={async () => {
                 try {
-                  const cleaned = editableSubjects.map(s => ({ subject: String(s.subject || '').trim(), grade: String(s.grade || '').trim() }));
+                  const cleaned = editableSubjects.map(s => ({
+                    subject: String(s.subject || '').trim(),
+                    grade: String(s.grade || '').trim(),
+                    unit: String(s.unit || '').trim()
+                  }));
                   for (const s of cleaned) {
                     if (!s.subject) { showToast('Subject name cannot be empty', 'warning'); return; }
                     if (!/^\d+(\.\d{1,2})?$/.test(s.grade)) { showToast('Grades must be numeric with up to 2 decimals', 'warning'); return; }
                     const num = parseFloat(s.grade);
                     if (isNaN(num) || num > 5) { showToast('Invalid grade value (max 5.00)', 'warning'); return; }
                     s.grade = num.toFixed(2);
+                    if (!s.unit || isNaN(Number(s.unit)) || Number(s.unit) <= 0) { showToast('Unit must be a positive number', 'warning'); return; }
                   }
 
                   const payload = { subjects: JSON.stringify(cleaned) };
@@ -608,7 +613,7 @@ const StudentDashboard = () => {
           )}
         </div>
       </div>
-      
+
       {loading ? (
         <div className="text-center py-12">
           <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-600 mb-4"></div>
@@ -618,7 +623,7 @@ const StudentDashboard = () => {
         <div className="space-y-3">
           {(isEditingGrades ? editableSubjects : subjects).map((subject, index) => (
             <div key={index} className="flex items-center justify-between bg-gray-50 p-4 rounded-lg hover:bg-gray-100 transition-colors">
-              <div className="flex items-center space-x-3 w-2/3">
+              <div className="flex items-center space-x-3 w-2/5">
                 <div className="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center text-white font-bold">
                   {index + 1}
                 </div>
@@ -629,6 +634,18 @@ const StudentDashboard = () => {
                     const val = e.target.value;
                     setEditableSubjects(prev => prev.map((p, i) => i === index ? { ...p, subject: val } : p));
                   }} className="w-full px-3 py-2 rounded border" />
+                )}
+              </div>
+              <div className="flex items-center space-x-3 w-1/5 justify-end">
+                {!isEditingGrades ? (
+                  <span className="text-lg font-semibold text-gray-700">{subject.unit || '-'}</span>
+                ) : (
+                  <input value={subject.unit || ''} inputMode="numeric" onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === '' || /^\d+$/.test(val)) {
+                      setEditableSubjects(prev => prev.map((p, i) => i === index ? { ...p, unit: val } : p));
+                    }
+                  }} className="w-16 px-2 py-2 rounded border text-center" placeholder="Unit" />
                 )}
               </div>
               <div className="flex items-center space-x-3 w-1/3 justify-end">
@@ -650,10 +667,10 @@ const StudentDashboard = () => {
           ))}
           {isEditingGrades && (
             <div className="mt-4">
-              <button onClick={() => setEditableSubjects(prev => [...prev, { subject: '', grade: '0.00' }])} className="px-4 py-2 bg-green-600 text-white rounded">Add Subject</button>
+              <button onClick={() => setEditableSubjects(prev => [...prev, { subject: '', grade: '0.00', unit: '' }])} className="px-4 py-2 bg-green-600 text-white rounded">Add Subject</button>
             </div>
           )}
-          
+
           {/* Average Display */}
           <div className="mt-6 pt-6 border-t border-gray-200">
             <div className="flex items-center justify-between bg-gradient-to-r from-green-50 to-emerald-50 p-6 rounded-lg">
