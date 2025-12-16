@@ -15,6 +15,23 @@ const ApplicantRegister = () => {
   const [gradeInput, setGradeInput] = useState('');
   const [subjectList, setSubjectList] = useState([]);
 
+  const handleGradeInputChange = (e) => {
+    const val = e.target.value;
+    // Allow empty, digits and up to two decimal digits after the dot while typing
+    if (val === '') {
+      setGradeInput('');
+      return;
+    }
+    if (!/^\d+(\.\d{0,2})?$/.test(val)) {
+      return; // ignore invalid keystrokes
+    }
+    const num = parseFloat(val);
+    if (!isNaN(num) && num > 5) {
+      showToast('Grade cannot be greater than 5.0', 'error');
+      return;
+    }
+    setGradeInput(val);
+  };
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -24,11 +41,24 @@ const ApplicantRegister = () => {
   };
 
   const handleAddSubject = () => {
-    if (subjectInput.trim() !== '' && gradeInput.trim() !== '') {
-      setSubjectList(prev => [...prev, { subject: subjectInput.trim(), grade: gradeInput.trim() }]);
-      setSubjectInput('');
-      setGradeInput('');
+    if (subjectInput.trim() === '' || gradeInput.trim() === '') return;
+
+    const raw = gradeInput.trim();
+    if (!/^\d+(\.\d{0,2})?$/.test(raw)) {
+      showToast('Please enter a valid grade (up to two decimal places, e.g. 1.00, 2.50)', 'error');
+      return;
     }
+    const num = parseFloat(raw);
+    if (num > 5) {
+      showToast('Grade cannot be greater than 5.0', 'error');
+      return;
+    }
+
+    const gradeFormatted = num.toFixed(2); // ensure two decimal places like 3.00
+
+    setSubjectList(prev => [...prev, { subject: subjectInput.trim(), grade: gradeFormatted }]);
+    setSubjectInput('');
+    setGradeInput('');
   };
 
   const handleRemoveSubject = (index) => {
@@ -154,8 +184,9 @@ const ApplicantRegister = () => {
                 <div className="relative w-32">
                   <input
                     type="text"
+                    inputMode="decimal"
                     value={gradeInput}
-                    onChange={(e) => setGradeInput(e.target.value)}
+                    onChange={handleGradeInputChange}
                     onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddSubject())}
                     className="w-full px-4 py-3 bg-white text-gray-800 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition duration-200 placeholder-gray-400"
                     placeholder="Grade"
