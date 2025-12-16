@@ -77,8 +77,6 @@ const Reports = () => {
     { value: 'students', label: 'Student Records Report', icon: '👥' },
     { value: 'scholarships', label: 'Scholarship Programs Report', icon: '💰' },
     { value: 'applications', label: 'Applications Report', icon: '📋' },
-    { value: 'financial', label: 'Financial Summary Report', icon: '💵' },
-    { value: 'academic', label: 'Academic Performance Report', icon: '📊' },
   ];
 
   const recentReports = recentReportsData && recentReportsData.length > 0 ? recentReportsData.map(r => ({
