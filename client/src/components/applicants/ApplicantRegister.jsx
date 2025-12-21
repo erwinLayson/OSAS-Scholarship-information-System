@@ -69,10 +69,19 @@ const ApplicantRegister = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    // Only allow SKSU email addresses
+    const email = (formData.email || '').trim();
+    const sksuRegex = /^[\w.+-]+@sksu\.edu\.ph$/i;
+    if (!sksuRegex.test(email)) {
+      showToast('Only sksu.edu.ph email addresses are allowed', 'error');
+      return;
+    }
+
     const registrationData = {
       ...formData,
+      email,
       subjects: subjectList
-      };
+    };
 
       try {
           const res = await API.post('/applicants/register', registrationData);

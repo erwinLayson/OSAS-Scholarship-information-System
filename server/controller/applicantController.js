@@ -14,6 +14,15 @@ const applicantsController = {
             });
             }
 
+            // Enforce SKSU email domain
+            const sksuRegex = /^[\w.+-]+@sksu\.edu\.ph$/i;
+            if (!sksuRegex.test((email || '').trim())) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Only sksu.edu.ph email addresses are allowed'
+                });
+            }
+
             // Check if email already exists
             applicants.getByEmail(email, (err, results) => {
             if (err) {
