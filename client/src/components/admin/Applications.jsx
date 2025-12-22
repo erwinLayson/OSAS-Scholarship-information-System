@@ -3,6 +3,7 @@ import AdminLayout from './shareFIles/AdminLayout';
 import API from '../../API/fetchAPI';
 import { useToast } from '../../hooks/useToast';
 import Toast from '../shared/Toast';
+import { ClipboardIcon, HourglassIcon, SuccessIcon, BookIcon, CloseIcon, ArrowRightIcon } from '../shared/Icons';
 
 const Applications = () => {
     const [applications, setApplications] = useState([]);
@@ -121,18 +122,18 @@ const Applications = () => {
   };
 
   const stats = [
-    { title: 'Total Students', value: applications.length, icon: '📋', color: 'bg-green-900' },
+    { title: 'Total Students', value: applications.length, icon: <ClipboardIcon className="w-8 h-8 text-green-200" />, color: 'bg-green-900' },
     { title: 'This Week', value: applications.filter(a => {
       const createdDate = new Date(a.created_at);
       const weekAgo = new Date();
       weekAgo.setDate(weekAgo.getDate() - 7);
       return createdDate >= weekAgo;
-    }).length, icon: '⏳', color: 'bg-yellow-900' },
+    }).length, icon: <HourglassIcon className="w-8 h-8 text-yellow-200" />, color: 'bg-yellow-900' },
     { title: 'This Month', value: applications.filter(a => {
       const createdDate = new Date(a.created_at);
       return createdDate.getMonth() === new Date().getMonth();
-    }).length, icon: '✅', color: 'bg-green-800' },
-    { title: 'With Subjects', value: applications.filter(a => a.subjects && JSON.parse(a.subjects).length > 0).length, icon: '📚', color: 'bg-blue-900' },
+    }).length, icon: <SuccessIcon className="w-8 h-8 text-green-200" />, color: 'bg-green-800' },
+    { title: 'With Subjects', value: applications.filter(a => a.subjects && JSON.parse(a.subjects).length > 0).length, icon: <BookIcon className="w-8 h-8 text-blue-200" />, color: 'bg-blue-900' },
   ];
 
     useEffect(() => {
@@ -310,9 +311,10 @@ const Applications = () => {
                         <td className="py-4 px-6">
                           <button 
                             onClick={() => handleView(app)}
-                            className="text-green-400 hover:text-green-200 font-medium transition-colors"
+                            className="text-green-400 hover:text-green-200 font-medium transition-colors flex items-center gap-2"
                           >
-                            View →
+                            <span>View</span>
+                            <ArrowRightIcon className="w-4 h-4 text-green-400" />
                           </button>
                         </td>
                       </tr>
@@ -366,7 +368,7 @@ const Applications = () => {
                   className="text-green-300 hover:text-white text-2xl font-bold transition-colors"
                   disabled={loading}
                 >
-                  ×
+                  <CloseIcon className="w-5 h-5" />
                 </button>
               </div>
 
@@ -446,7 +448,7 @@ const Applications = () => {
                   onClick={handleCloseModal}
                   className="text-green-300 hover:text-white text-2xl font-bold transition-colors"
                 >
-                  ×
+                  <CloseIcon className="w-5 h-5" />
                 </button>
               </div>
 

@@ -3,6 +3,7 @@ import AdminLayout from './shareFIles/AdminLayout';
 import API from '../../API/fetchAPI';
 import { useToast } from '../../hooks/useToast';
 import Toast from '../shared/Toast';
+import { CloseIcon } from '../shared/Icons';
 
 // Modal for viewing application documents
 const ApplicationDocumentsModal = ({ visible, onClose, app }) => {
@@ -23,7 +24,9 @@ const ApplicationDocumentsModal = ({ visible, onClose, app }) => {
             <h3 className="text-2xl font-bold text-gray-800">Documents for {app.student_name || app.email}</h3>
             <p className="text-sm text-gray-600">Scholarship: {app.scholarship_name || app.scholarship_id}</p>
           </div>
-          <button onClick={onClose} className="text-gray-600 hover:text-gray-800 text-2xl font-bold">×</button>
+          <button onClick={onClose} className="text-gray-600 hover:text-gray-800 text-2xl font-bold" aria-label="Close">
+            <CloseIcon className="w-5 h-5" />
+          </button>
         </div>
         <div className="p-6 space-y-4">
           <div>

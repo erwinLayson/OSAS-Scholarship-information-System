@@ -3,6 +3,7 @@ import AdminLayout from './shareFIles/AdminLayout';
 import API from '../../API/fetchAPI';
 import { useToast } from '../../hooks/useToast';
 import Toast from '../shared/Toast';
+import { MoneyIcon, SuccessIcon, PeopleIcon, ClipboardIcon, CloseIcon, PlusIcon } from '../shared/Icons';
 
 const Scholarships = () => {
   const { toasts, showToast, hideToast } = useToast();
@@ -51,10 +52,10 @@ const Scholarships = () => {
   });
 
   const stats = [
-    { title: 'Total Scholarships', value: scholarships.length, icon: '💰', color: 'bg-green-900' },
-    { title: 'Active Programs', value: scholarships.filter(s => s.status === 'Active').length, icon: '✅', color: 'bg-blue-900' },
-    { title: 'Total Slots', value: scholarships.reduce((sum, s) => sum + s.slots, 0), icon: '👥', color: 'bg-purple-900' },
-    { title: 'Available Slots', value: scholarships.reduce((sum, s) => sum + s.available_slots, 0), icon: '📋', color: 'bg-yellow-900' },
+    { title: 'Total Scholarships', value: scholarships.length, icon: <MoneyIcon className="w-8 h-8 text-green-200" />, color: 'bg-green-900' },
+    { title: 'Active Programs', value: scholarships.filter(s => s.status === 'Active').length, icon: <SuccessIcon className="w-8 h-8 text-blue-200" />, color: 'bg-blue-900' },
+    { title: 'Total Slots', value: scholarships.reduce((sum, s) => sum + s.slots, 0), icon: <PeopleIcon className="w-8 h-8 text-purple-200" />, color: 'bg-purple-900' },
+    { title: 'Available Slots', value: scholarships.reduce((sum, s) => sum + s.available_slots, 0), icon: <ClipboardIcon className="w-8 h-8 text-yellow-200" />, color: 'bg-yellow-900' },
   ];
 
   const handleView = (scholarship) => {
@@ -367,8 +368,9 @@ const Scholarships = () => {
                 <button
                   onClick={handleCloseModal}
                   className="text-green-300 hover:text-white text-2xl font-bold transition-colors"
+                  aria-label="Close"
                 >
-                  ×
+                  <CloseIcon className="w-5 h-5" />
                 </button>
               </div>
 

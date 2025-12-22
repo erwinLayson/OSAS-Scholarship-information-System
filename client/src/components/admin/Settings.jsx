@@ -3,6 +3,7 @@ import AdminLayout from './shareFIles/AdminLayout';
 import API from '../../API/fetchAPI';
 import { useToast } from '../../hooks/useToast';
 import Toast from '../shared/Toast';
+import { UserIcon, InfoIcon, LockIcon, BellIcon } from '../shared/Icons';
 
 const Settings = () => {
     const { toasts, showToast, hideToast } = useToast();
@@ -29,11 +30,11 @@ const Settings = () => {
     });
 
     const tabs = [
-        { id: 'profile', name: 'Profile Settings', icon: '👤' },
-        { id: 'system', name: 'System Settings', icon: '⚙️' },
-        { id: 'security', name: 'Security', icon: '🔒' },
-        { id: 'notifications', name: 'Notifications', icon: '🔔' },
-        ];
+      { id: 'profile', name: 'Profile Settings', icon: <UserIcon className="w-5 h-5" /> },
+      { id: 'system', name: 'System Settings', icon: <InfoIcon className="w-5 h-5" /> },
+      { id: 'security', name: 'Security', icon: <LockIcon className="w-5 h-5" /> },
+      { id: 'notifications', name: 'Notifications', icon: <BellIcon className="w-5 h-5" /> },
+      ];
     
     function handleInput(e) {
         const { name, value } = e.target;

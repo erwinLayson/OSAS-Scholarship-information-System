@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import API from '../../API/fetchAPI';
 import { useToast } from '../../hooks/useToast';
 import Toast from '../shared/Toast';
+import { BookIcon, ChartIcon, MoneyIcon, UserIcon, SuccessIcon, WarningIcon, CloseIcon, ArrowRightIcon, ClipboardIcon, HourglassIcon } from '../shared/Icons';
 
 const StudentDashboard = () => {
   const navigate = useNavigate();
@@ -13,13 +14,17 @@ const StudentDashboard = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeView, setActiveView] = useState('dashboard');
   const [isEditingProfile, setIsEditingProfile] = useState(false);
-  const [isEditingGrades, setIsEditingGrades] = useState(false);
   const [profileForm, setProfileForm] = useState({ name: '', email: '', username: '' });
-  const [editableSubjects, setEditableSubjects] = useState([]);
   const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [showApplyModal, setShowApplyModal] = useState(false);
   const [selectedScholarship, setSelectedScholarship] = useState(null);
+  const [allowGradeEdit, setAllowGradeEdit] = useState(false);
+  const [editingGrades, setEditingGrades] = useState([]);
+  const [recentHistory, setRecentHistory] = useState([]);
+  const [hasUpdatedThisSemester, setHasUpdatedThisSemester] = useState(false);
+  const [currentEditSessionId, setCurrentEditSessionId] = useState('');
+  const [currentEditSemester, setCurrentEditSemester] = useState('');
   const [studentApplications, setStudentApplications] = useState([]);
   const [appDetailsModalVisible, setAppDetailsModalVisible] = useState(false);
   const [selectedApplicationDetail, setSelectedApplicationDetail] = useState(null);
@@ -28,6 +33,65 @@ const StudentDashboard = () => {
     fetchScholarships();
     fetchStudentProfile();
     fetchStudentApplications();
+    // fetch server-side setting for grade editing (includes session id and semester)
+    (async () => {
+      try {
+        const res = await API.get('/settings/allow_grade_edit');
+        if (res.data && res.data.success) {
+          setAllowGradeEdit(!!res.data.value);
+          setCurrentEditSessionId(res.data.sessionId || '');
+          setCurrentEditSemester(res.data.semester || '');
+        }
+      } catch (e) {
+        try {
+          const val = localStorage.getItem('allow_grade_edit') === 'true';
+          setAllowGradeEdit(val);
+        } catch (e2) {}
+      }
+    })();
+    // fetch student's recent grades history
+    fetchRecentHistory();
+  }, []);
+
+  useEffect(() => {
+    // determine whether the student has already updated for the current admin-enabled session
+    // prefer matching by session id (if available), otherwise fall back to semester match
+    const sessionId = currentEditSessionId;
+    if (sessionId) {
+      const foundBySession = recentHistory.some(r => String(r.session_id || r.sessionId || '') === String(sessionId));
+      setHasUpdatedThisSemester(!!foundBySession);
+      return;
+    }
+
+    const configuredSemester = currentEditSemester;
+    if (configuredSemester) {
+      const foundByConfigured = recentHistory.some(r => String(r.semester) === String(configuredSemester));
+      setHasUpdatedThisSemester(!!foundByConfigured);
+      return;
+    }
+
+    // fallback: use client-side computed current semester (date-based)
+    const getCurrentSemester = () => {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = now.getMonth() + 1;
+      const sem = month >= 7 ? 'S2' : 'S1';
+      return `${year}-${sem}`;
+    };
+    const cur = getCurrentSemester();
+    const found = recentHistory.some(r => String(r.semester) === String(cur));
+    setHasUpdatedThisSemester(found);
+  }, [recentHistory, currentEditSessionId, currentEditSemester]);
+
+  useEffect(() => {
+    // keep toggle in sync if admin changes it in another tab
+    const onStorage = (e) => {
+      if (e.key === 'allow_grade_edit') {
+        setAllowGradeEdit(e.newValue === 'true');
+      }
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
   }, []);
 
   const fetchStudentApplications = async () => {
@@ -60,13 +124,7 @@ const StudentDashboard = () => {
       const response = await API.get('/students/profile');
       if (response.data.success) {
         setStudentData(response.data.data);
-        // initialize editable subjects
-        try {
-          const s = typeof response.data.data.subjects === 'string' ? JSON.parse(response.data.data.subjects) : response.data.data.subjects;
-          setEditableSubjects(Array.isArray(s) ? s : []);
-        } catch (e) {
-          setEditableSubjects([]);
-        }
+        // subjects are stored on the profile; UI will render them read-only
         setProfileForm({ name: response.data.data.name || '', email: response.data.data.email || '', username: response.data.data.username || '' });
       }
     } catch (error) {
@@ -81,14 +139,32 @@ const StudentDashboard = () => {
     }
   };
 
+  const fetchRecentHistory = async () => {
+    try {
+      const res = await API.get('/students/recent-grades');
+      if (res.data && res.data.success) {
+        setRecentHistory(Array.isArray(res.data.data) ? res.data.data : []);
+      }
+    } catch (err) {
+      console.error('Error fetching recent grades history', err);
+    }
+  };
+
   const calculateAverage = () => {
+    // If editing, compute from the editing buffer so UI shows live average
+    if (allowGradeEdit && Array.isArray(editingGrades) && editingGrades.length > 0) {
+      const list = editingGrades.filter(s => s && (s.grade || s.score || s.value));
+      if (list.length === 0) return 'N/A';
+      const total = list.reduce((sum, subj) => sum + (parseFloat(subj.grade || subj.score || subj.value || 0) || 0), 0);
+      return (total / list.length).toFixed(2);
+    }
+
     if (!studentData || !studentData.subjects) return 'N/A';
 
     let subjects;
     try {
       subjects = typeof studentData.subjects === 'string' ? JSON.parse(studentData.subjects) : studentData.subjects;
     } catch (err) {
-      // fallback: try to coerce a JSON-like string
       try {
         const cleaned = String(studentData.subjects).replace(/([\w\d]+)\s*:/g, '"$1":');
         subjects = JSON.parse(cleaned);
@@ -99,7 +175,7 @@ const StudentDashboard = () => {
 
     if (!Array.isArray(subjects) || subjects.length === 0) return 'N/A';
 
-    const total = subjects.reduce((sum, subj) => sum + parseFloat(subj.grade || subj.score || 0), 0);
+    const total = subjects.reduce((sum, subj) => sum + (parseFloat(subj.grade || subj.score || subj.value || 0) || 0), 0);
     return (total / subjects.length).toFixed(2);
   };
 
@@ -130,16 +206,34 @@ const StudentDashboard = () => {
       }
     }
   })();
+
+  // initialize editingGrades whenever profile subjects change
+  useEffect(() => {
+    try {
+      const copy = Array.isArray(subjects) ? subjects.map(s => ({ ...s })) : [];
+      setEditingGrades(copy);
+    } catch (e) { setEditingGrades([]); }
+  }, [studentData]);
   
   const average = calculateAverage();
   const gradeStatus = getGradeStatus();
 
+  // derived grade info for recent display (use editing buffer when editing)
+  const currentList = allowGradeEdit ? (Array.isArray(editingGrades) ? editingGrades : []) : subjects;
+  const totalUnits = currentList.reduce((sum, s) => sum + (Number(s.unit) || 0), 0);
+  const recentGrades = currentList.length > 0 ? currentList.slice(-5).slice().reverse() : [];
+  const recentAverage = (() => {
+    if (!recentGrades || recentGrades.length === 0) return 'N/A';
+    const total = recentGrades.reduce((acc, s) => acc + (Number(s.grade || s.score || s.value || 0) || 0), 0);
+    return (total / recentGrades.length).toFixed(2);
+  })();
+
   const menuItems = [
-    { id: 'dashboard', name: 'Dashboard', icon: '📊' },
-    { id: 'scholarships', name: 'Scholarships', icon: '💰' },
-    { id: 'grades', name: 'My Grades', icon: '📚' },
-    { id: 'applications', name: 'Applications', icon: '📝' },
-    { id: 'profile', name: 'Profile', icon: '👤' },
+    { id: 'dashboard', name: 'Dashboard', icon: <ChartIcon className="w-5 h-5" /> },
+    { id: 'scholarships', name: 'Scholarships', icon: <MoneyIcon className="w-5 h-5" /> },
+    { id: 'grades', name: 'My Grades', icon: <BookIcon className="w-5 h-5" /> },
+    { id: 'applications', name: 'Applications', icon: <ChartIcon className="w-5 h-5" /> },
+    { id: 'profile', name: 'Profile', icon: <UserIcon className="w-5 h-5" /> },
   ];
 
   const handleLogout = () => {
@@ -228,7 +322,9 @@ const StudentDashboard = () => {
               <h3 className="text-2xl font-bold text-green-50">Change Password</h3>
               <p className="text-green-300 text-sm">Update your account password</p>
             </div>
-            <button onClick={onClose} className="text-green-300 hover:text-white text-2xl font-bold">×</button>
+            <button onClick={onClose} className="text-green-300 hover:text-white text-2xl font-bold" aria-label="Close">
+              <CloseIcon className="w-5 h-5" />
+            </button>
           </div>
 
           <div className="p-6">
@@ -299,10 +395,10 @@ const StudentDashboard = () => {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
         <div className="bg-blue-900 rounded-xl p-6 border border-blue-700 shadow-xl">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-3xl">📚</span>
+            <span className="text-3xl"><BookIcon className="w-8 h-8 text-blue-300" /></span>
           </div>
           <h3 className="text-blue-300 text-sm font-medium mb-1">Total Subjects</h3>
           <p className="text-3xl font-bold text-blue-50">{subjects.length}</p>
@@ -310,7 +406,7 @@ const StudentDashboard = () => {
 
         <div className="bg-purple-900 rounded-xl p-6 border border-purple-700 shadow-xl">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-3xl">📊</span>
+            <span className="text-3xl"><ChartIcon className="w-8 h-8 text-purple-300" /></span>
           </div>
           <h3 className="text-purple-300 text-sm font-medium mb-1">Average Grade</h3>
           <p className="text-3xl font-bold text-purple-50">{average}</p>
@@ -318,7 +414,7 @@ const StudentDashboard = () => {
 
         <div className={`bg-${gradeStatus.color}-900 rounded-xl p-6 border border-${gradeStatus.color}-700 shadow-xl`}>
           <div className="flex items-center justify-between mb-2">
-            <span className="text-3xl">{gradeStatus.color === 'green' ? '✅' : '⚠️'}</span>
+            <span className="text-3xl">{gradeStatus.color === 'green' ? <SuccessIcon className="w-8 h-8 text-green-300" /> : <WarningIcon className="w-8 h-8 text-yellow-400" />}</span>
           </div>
           <h3 className={`text-${gradeStatus.color}-300 text-sm font-medium mb-1`}>Academic Status</h3>
           <p className={`text-3xl font-bold text-${gradeStatus.color}-50`}>{gradeStatus.status}</p>
@@ -337,7 +433,7 @@ const StudentDashboard = () => {
               <p className="text-gray-800 font-semibold text-lg">View Scholarships</p>
               <p className="text-gray-600 text-sm mt-1">{scholarships.length} available</p>
             </div>
-            <span className="text-3xl">💰</span>
+            <span className="text-3xl"><MoneyIcon className="w-8 h-8 text-green-600" /></span>
           </button>
           
           <button
@@ -348,7 +444,7 @@ const StudentDashboard = () => {
               <p className="text-gray-800 font-semibold text-lg">My Grades</p>
               <p className="text-gray-600 text-sm mt-1">{subjects.length} subjects</p>
             </div>
-            <span className="text-3xl">📚</span>
+            <span className="text-3xl"><BookIcon className="w-8 h-8 text-blue-600" /></span>
           </button>
           
           <button
@@ -359,7 +455,7 @@ const StudentDashboard = () => {
               <p className="text-gray-800 font-semibold text-lg">My Profile</p>
               <p className="text-gray-600 text-sm mt-1">View details</p>
             </div>
-            <span className="text-3xl">👤</span>
+            <span className="text-3xl"><UserIcon className="w-8 h-8 text-purple-600" /></span>
           </button>
         </div>
       </div>
@@ -393,17 +489,17 @@ const StudentDashboard = () => {
               
               <div className="space-y-2 mb-4">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-600 font-medium">💰 Amount:</span>
+                  <span className="text-gray-600 font-medium flex items-center gap-2"><MoneyIcon className="w-4 h-4 text-gray-600" /> Amount:</span>
                   <span className="text-green-600 font-bold text-lg">₱{Number(scholarship.amount).toLocaleString()}</span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-600 font-medium">📋 Available Slots:</span>
+                  <span className="text-gray-600 font-medium flex items-center gap-2"><ClipboardIcon className="w-4 h-4 text-gray-600" /> Available Slots:</span>
                   <span className={`font-bold ${scholarship.available_slots > 0 ? 'text-green-600' : 'text-red-600'}`}>
                     {scholarship.available_slots} / {scholarship.slots}
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-600 font-medium">📅 Deadline:</span>
+                  <span className="text-gray-600 font-medium flex items-center gap-2"><HourglassIcon className="w-4 h-4 text-gray-600" /> Deadline:</span>
                   <span className="text-gray-800 font-semibold">
                     {new Date(scholarship.deadline).toLocaleDateString('en-US', {
                       year: 'numeric',
@@ -449,7 +545,9 @@ const StudentDashboard = () => {
                 <h3 className="text-2xl font-bold text-green-50">Apply for {selectedScholarship.name}</h3>
                 <p className="text-green-300 text-sm">Attach required documents (COE, TOR, COR)</p>
               </div>
-              <button onClick={()=>{setShowApplyModal(false); setSelectedScholarship(null);}} className="text-green-300 hover:text-white text-2xl font-bold">×</button>
+              <button onClick={()=>{setShowApplyModal(false); setSelectedScholarship(null);}} className="text-green-300 hover:text-white text-2xl font-bold" aria-label="Close">
+                <CloseIcon className="w-5 h-5" />
+              </button>
             </div>
 
             <div className="p-6">
@@ -522,7 +620,9 @@ const StudentDashboard = () => {
               <span className={`px-3 py-1 rounded-full text-sm font-semibold ${app.status === 'Approved' ? 'bg-green-100 text-green-700' : app.status === 'Rejected' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>
                 {app.status}
               </span>
-              <button onClick={onClose} className="text-gray-600 hover:text-gray-800 text-2xl font-bold">×</button>
+              <button onClick={onClose} className="text-gray-600 hover:text-gray-800 text-2xl font-bold" aria-label="Close">
+                <CloseIcon className="w-5 h-5" />
+              </button>
             </div>
           </div>
 
@@ -573,45 +673,7 @@ const StudentDashboard = () => {
           </svg>
           Subjects & Grades
         </h3>
-        <div className="flex items-center gap-2">
-          {!isEditingGrades ? (
-            <button onClick={() => { setIsEditingGrades(true); setEditableSubjects(subjects); }} className="px-4 py-2 bg-green-600 text-white rounded">Edit Grades</button>
-          ) : (
-            <>
-              <button onClick={async () => {
-                try {
-                  const cleaned = editableSubjects.map(s => ({
-                    subject: String(s.subject || '').trim(),
-                    grade: String(s.grade || '').trim(),
-                    unit: String(s.unit || '').trim()
-                  }));
-                  for (const s of cleaned) {
-                    if (!s.subject) { showToast('Subject name cannot be empty', 'warning'); return; }
-                    if (!/^\d+(\.\d{1,2})?$/.test(s.grade)) { showToast('Grades must be numeric with up to 2 decimals', 'warning'); return; }
-                    const num = parseFloat(s.grade);
-                    if (isNaN(num) || num > 5) { showToast('Invalid grade value (max 5.00)', 'warning'); return; }
-                    s.grade = num.toFixed(2);
-                    if (!s.unit || isNaN(Number(s.unit)) || Number(s.unit) <= 0) { showToast('Unit must be a positive number', 'warning'); return; }
-                  }
-
-                  const payload = { subjects: JSON.stringify(cleaned) };
-                  const res = await API.put('/students/profile', payload);
-                  if (res.data && res.data.success) {
-                    showToast('Grades updated', 'success');
-                    await fetchStudentProfile();
-                    setIsEditingGrades(false);
-                  } else {
-                    showToast(res.data?.message || 'Failed to update grades', 'error');
-                  }
-                } catch (err) {
-                  console.error('Save grades error', err);
-                  showToast(err.response?.data?.message || 'Failed to save grades', 'error');
-                }
-              }} className="px-4 py-2 bg-blue-600 text-white rounded">Save</button>
-              <button onClick={() => { setIsEditingGrades(false); setEditableSubjects(subjects); }} className="px-4 py-2 bg-gray-300 text-gray-800 rounded">Cancel</button>
-            </>
-          )}
-        </div>
+        <div />
       </div>
 
       {loading ? (
@@ -619,71 +681,192 @@ const StudentDashboard = () => {
           <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-600 mb-4"></div>
           <p className="text-gray-500">Loading your grades...</p>
         </div>
-      ) : subjects.length > 0 ? (
+      ) : (allowGradeEdit || subjects.length > 0) ? (
         <div className="space-y-3">
-          {(isEditingGrades ? editableSubjects : subjects).map((subject, index) => (
+          {currentList.map((subject, index) => (
             <div key={index} className="flex items-center justify-between bg-gray-50 p-4 rounded-lg hover:bg-gray-100 transition-colors">
               <div className="flex items-center space-x-3 w-2/5">
                 <div className="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center text-white font-bold">
                   {index + 1}
                 </div>
-                {!isEditingGrades ? (
-                  <span className="text-gray-800 font-medium text-lg">{subject.subject}</span>
+                {allowGradeEdit ? (
+                  <input
+                    type="text"
+                    value={editingGrades[index]?.subject ?? subject.subject ?? ''}
+                    onChange={(e) => setEditingGrades(prev => {
+                      const copy = prev.slice();
+                      copy[index] = { ...(copy[index] || {}), subject: e.target.value };
+                      return copy;
+                    })}
+                    placeholder="Subject name"
+                    className="text-gray-800 font-medium text-lg w-full px-2 py-1 rounded border"
+                  />
                 ) : (
-                  <input value={subject.subject} onChange={(e) => {
-                    const val = e.target.value;
-                    setEditableSubjects(prev => prev.map((p, i) => i === index ? { ...p, subject: val } : p));
-                  }} className="w-full px-3 py-2 rounded border" />
+                  <span className="text-gray-800 font-medium text-lg">{subject.subject}</span>
                 )}
               </div>
               <div className="flex items-center space-x-3 w-1/5 justify-end">
-                {!isEditingGrades ? (
-                  <span className="text-lg font-semibold text-gray-700">{subject.unit || '-'}</span>
+                {allowGradeEdit ? (
+                  <input
+                    type="number"
+                    value={editingGrades[index]?.unit ?? subject.unit ?? ''}
+                    onChange={(e) => setEditingGrades(prev => {
+                      const copy = prev.slice();
+                      copy[index] = { ...(copy[index] || {}), unit: e.target.value };
+                      return copy;
+                    })}
+                    placeholder="Unit"
+                    className="text-center text-lg font-semibold text-gray-700 px-2 py-1 rounded border w-20"
+                  />
                 ) : (
-                  <input value={subject.unit || ''} inputMode="numeric" onChange={(e) => {
-                    const val = e.target.value;
-                    if (val === '' || /^\d+$/.test(val)) {
-                      setEditableSubjects(prev => prev.map((p, i) => i === index ? { ...p, unit: val } : p));
-                    }
-                  }} className="w-16 px-2 py-2 rounded border text-center" placeholder="Unit" />
+                  <span className="text-lg font-semibold text-gray-700">{subject.unit || '-'}</span>
                 )}
               </div>
               <div className="flex items-center space-x-3 w-1/3 justify-end">
-                {!isEditingGrades ? (
-                  <span className="text-2xl font-bold text-green-600 bg-green-100 px-4 py-2 rounded-lg">{subject.grade}</span>
-                ) : (
+                {allowGradeEdit ? (
                   <div className="flex items-center gap-2">
-                    <input value={subject.grade} inputMode="decimal" onChange={(e) => {
-                      const val = e.target.value;
-                      if (val === '' || /^\d+(\.\d{0,2})?$/.test(val)) {
-                        setEditableSubjects(prev => prev.map((p, i) => i === index ? { ...p, grade: val } : p));
-                      }
-                    }} className="w-28 px-3 py-2 rounded border text-right" />
-                    <button onClick={() => setEditableSubjects(prev => prev.filter((_, i) => i !== index))} className="text-red-600">Remove</button>
+                    <input
+                      type="text"
+                      value={editingGrades[index]?.grade ?? subject.grade ?? ''}
+                      onChange={(e) => setEditingGrades(prev => {
+                        const copy = prev.slice();
+                        copy[index] = { ...(copy[index] || {}), grade: e.target.value };
+                        return copy;
+                      })}
+                      className="text-2xl font-bold text-green-600 bg-green-100 px-4 py-2 rounded-lg w-32 text-center"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setEditingGrades(prev => {
+                        const copy = prev.slice();
+                        copy.splice(index, 1);
+                        return copy;
+                      })}
+                      className="px-3 py-1 bg-red-500 text-white rounded text-sm"
+                    >
+                      Remove
+                    </button>
                   </div>
+                ) : (
+                  <span className="text-2xl font-bold text-green-600 bg-green-100 px-4 py-2 rounded-lg">{subject.grade}</span>
                 )}
               </div>
             </div>
           ))}
-          {isEditingGrades && (
-            <div className="mt-4">
-              <button onClick={() => setEditableSubjects(prev => [...prev, { subject: '', grade: '0.00', unit: '' }])} className="px-4 py-2 bg-green-600 text-white rounded">Add Subject</button>
-            </div>
-          )}
 
           {/* Average Display */}
           <div className="mt-6 pt-6 border-t border-gray-200">
-            <div className="flex items-center justify-between bg-gradient-to-r from-green-50 to-emerald-50 p-6 rounded-lg">
-              <span className="text-gray-800 text-xl font-bold">Overall Average</span>
-              <div className="flex items-center space-x-4">
-                <span className="text-3xl font-bold text-green-600">{average}</span>
-                <span className={`px-4 py-2 rounded-lg text-lg font-bold ${
-                  gradeStatus.color === 'green' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
-                }`}>
-                  {gradeStatus.status}
-                </span>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
+              <div className="md:col-span-2 bg-white p-4 rounded-lg border border-gray-100">
+                <h4 className="text-lg font-semibold mb-3">Recent Grades History</h4>
+                {recentHistory.length === 0 ? (
+                  <p className="text-sm text-gray-500">No recent grades history available</p>
+                ) : (
+                  <div className="space-y-3">
+                    {recentHistory.map((entry, idx) => {
+                      // entry.grades is expected to be a JSON string of subjects
+                      let subs = [];
+                      try {
+                        subs = typeof entry.grades === 'string' ? JSON.parse(entry.grades) : entry.grades;
+                      } catch (e) { subs = []; }
+                      const avg = subs.length > 0 ? (subs.reduce((a,b)=>a+Number(b.grade||b.score||0),0)/subs.length).toFixed(2) : 'N/A';
+                      return (
+                        <div key={entry.recent_grade_id || idx} className="bg-gray-50 p-3 rounded">
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <div className="font-medium text-gray-800">Semester: {entry.semester ? String(entry.semester) : new Date(entry.create_at).toLocaleString()}</div>
+                              <div className="text-sm text-gray-500">Subjects: {Array.isArray(subs) ? subs.length : 0} — Average: {avg}</div>
+                            </div>
+                            <div className="text-right">
+                              <button onClick={() => {
+                                // toggle show details by id (simple inline expand)
+                                const el = document.getElementById('recent-'+(entry.recent_grade_id||idx));
+                                if (el) el.classList.toggle('hidden');
+                              }} className="px-3 py-1 bg-green-600 text-white rounded text-sm">Details</button>
+                            </div>
+                          </div>
+                          <div id={'recent-'+(entry.recent_grade_id||idx)} className="mt-3 hidden">
+                            <ul className="space-y-2">
+                              {subs.map((s, si) => (
+                                <li key={si} className="flex items-center justify-between bg-white p-2 rounded border">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center text-white font-bold">{si+1}</div>
+                                    <div>
+                                      <div className="font-medium text-gray-800">{s.subject || s.name || 'Subject'}</div>
+                                      <div className="text-sm text-gray-500">Units: {s.unit || '-'}</div>
+                                    </div>
+                                  </div>
+                                  <div className="text-lg font-bold text-green-600">{s.grade ?? s.score ?? s.value ?? '-'}</div>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-white p-6 rounded-lg border border-gray-100 flex flex-col justify-center items-start">
+                <div className="text-sm text-gray-600">Recent Average</div>
+                <div className="text-3xl font-bold text-green-600 my-2">{recentAverage}</div>
+                <div className="text-sm text-gray-600">Total Units</div>
+                <div className="text-2xl font-semibold text-gray-800">{totalUnits}</div>
               </div>
             </div>
+            {allowGradeEdit && !hasUpdatedThisSemester && (
+              <div className="mt-6 flex items-center justify-between">
+                <div className="flex gap-3">
+                  <button
+                    onClick={async () => {
+                      try {
+                        const payload = { subjects: JSON.stringify(editingGrades) };
+                        const res = await API.put('/students/profile', payload);
+                        if (res.data && res.data.success) {
+                          showToast('Grades updated', 'success');
+                          await fetchStudentProfile();
+                          // refresh recent grades history after saving
+                          await fetchRecentHistory();
+                        } else {
+                          showToast(res.data?.message || 'Failed to update grades', 'error');
+                        }
+                      } catch (err) {
+                        console.error('Error saving grades', err);
+                        showToast('Failed to save grades', 'error');
+                      }
+                    }}
+                    className="px-4 py-2 bg-green-600 text-white rounded"
+                  >
+                    Save Grades
+                  </button>
+                  <button
+                    onClick={() => {
+                      // revert edits
+                      setEditingGrades(Array.isArray(subjects) ? subjects.map(s => ({ ...s })) : []);
+                      showToast('Edits cancelled', 'warning');
+                    }}
+                    className="px-4 py-2 bg-gray-300 text-gray-800 rounded"
+                  >
+                    Cancel
+                  </button>
+                </div>
+
+                <div>
+                  <button
+                    onClick={() => setEditingGrades(prev => ([...(Array.isArray(prev) ? prev : []), { subject: '', unit: '', grade: '' }]))}
+                    className="px-4 py-2 bg-blue-600 text-white rounded"
+                  >
+                    Add Subject
+                  </button>
+                </div>
+              </div>
+            )}
+            {allowGradeEdit && hasUpdatedThisSemester && (
+              <div className="mt-6">
+                <div className="px-4 py-3 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800">You have already updated grades for the current session; editing is disabled.</div>
+              </div>
+            )}
           </div>
         </div>
       ) : (
@@ -864,8 +1047,9 @@ const StudentDashboard = () => {
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
               className="p-2 rounded-lg hover:bg-green-800 text-green-300 transition-colors"
+              aria-label="Toggle sidebar"
             >
-              {sidebarOpen ? '←' : '→'}
+              <ArrowRightIcon className={`w-5 h-5 transform transition-transform ${sidebarOpen ? 'rotate-180' : ''}`} />
             </button>
           </div>
         </div>

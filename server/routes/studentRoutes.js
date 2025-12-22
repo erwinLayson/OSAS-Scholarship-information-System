@@ -23,4 +23,8 @@ route.get('/profile', authenticateStudent, studentController.getProfile);
 route.put('/profile', authenticateStudent, studentController.updateProfile);
 route.post('/profile/password', authenticateStudent, studentController.changePassword);
 
+// Student can view their own recent grades history
+const recentGradesController = require('../controller/recentGradesController');
+route.get('/recent-grades', authenticateStudent, recentGradesController.getForCurrent);
+
 module.exports = route;

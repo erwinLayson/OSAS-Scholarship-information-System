@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import API from '../../../API/fetchAPI';
 import { useToast } from '../../../hooks/useToast';
 import Toast from '../../shared/Toast';
+import { ChartIcon, PeopleIcon, MoneyIcon, ClipboardIcon, ArrowRightIcon, InfoIcon } from '../../shared/Icons';
 
 const AdminLayout = ({ children, activeMenu, title, subtitle }) => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -10,13 +11,13 @@ const AdminLayout = ({ children, activeMenu, title, subtitle }) => {
   const { toasts, showToast, hideToast } = useToast();
 
   const menuItems = [
-    { id: 'dashboard', name: 'Dashboard', icon: '📊', path: '/dashboard' },
-    { id: 'students', name: 'Students', icon: '👨‍🎓', path: '/admin/students' },
-    { id: 'scholarships', name: 'Scholarships', icon: '💰', path: '/admin/scholarships' },
-    { id: 'applications', name: 'Student Applications', icon: '📋', path: '/admin/applications' },
-    { id: 'scholarship_applications', name: 'Scholarship Applications', icon: '🗂️', path: '/admin/scholarships/applications' },
-    { id: 'reports', name: 'Reports', icon: '📈', path: '/admin/reports' },
-    { id: 'settings', name: 'Settings', icon: '⚙️', path: '/admin/settings' },
+    { id: 'dashboard', name: 'Dashboard', icon: <ChartIcon className="w-5 h-5" />, path: '/dashboard' },
+    { id: 'students', name: 'Students', icon: <PeopleIcon className="w-5 h-5" />, path: '/admin/students' },
+    { id: 'scholarships', name: 'Scholarships', icon: <MoneyIcon className="w-5 h-5" />, path: '/admin/scholarships' },
+    { id: 'applications', name: 'Student Applications', icon: <ClipboardIcon className="w-5 h-5" />, path: '/admin/applications' },
+    { id: 'scholarship_applications', name: 'Scholarship Applications', icon: <ClipboardIcon className="w-5 h-5" />, path: '/admin/scholarships/applications' },
+    { id: 'reports', name: 'Reports', icon: <ChartIcon className="w-5 h-5" />, path: '/admin/reports' },
+    { id: 'settings', name: 'Settings', icon: <InfoIcon className="w-5 h-5" />, path: '/admin/settings' },
   ];
 
   const handleMenuClick = (item) => {
@@ -51,8 +52,9 @@ const AdminLayout = ({ children, activeMenu, title, subtitle }) => {
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
               className="p-2 rounded-lg hover:bg-green-800 text-green-300 transition-colors"
+              aria-label="Toggle sidebar"
             >
-              {sidebarOpen ? '←' : '→'}
+              <ArrowRightIcon className={`w-5 h-5 transform transition-transform ${sidebarOpen ? 'rotate-180' : ''}`} />
             </button>
           </div>
         </div>

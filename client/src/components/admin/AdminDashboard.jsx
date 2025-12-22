@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import AdminLayout from './shareFIles/AdminLayout';
 import API from '../../API/fetchAPI';
 import ActivityChart from './ActivityChart';
+import { PeopleIcon, ClipboardIcon, SuccessIcon, ChartIcon, PlusIcon } from '../shared/Icons';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -120,25 +121,25 @@ const AdminDashboard = () => {
     { 
       title: 'Total Students', 
       value: loading ? '...' : stats.totalStudents.toString(), 
-      icon: '👨‍🎓',
+      icon: <PeopleIcon className="w-8 h-8 text-blue-200" />,
       color: 'bg-blue-900'
     },
     { 
       title: 'Pending Applications', 
       value: loading ? '...' : stats.pendingApplications.toString(), 
-      icon: '📋',
+      icon: <ClipboardIcon className="w-8 h-8 text-yellow-200" />,
       color: 'bg-yellow-900'
     },
     { 
       title: 'Approved Applications', 
       value: loading ? '...' : stats.approvedApplications.toString(), 
-      icon: '✅',
+      icon: <SuccessIcon className="w-8 h-8 text-green-200" />,
       color: 'bg-green-900'
     },
     { 
       title: 'Total Applications', 
       value: loading ? '...' : stats.totalApplications.toString(), 
-      icon: '📊',
+      icon: <ChartIcon className="w-8 h-8 text-purple-200" />,
       color: 'bg-purple-900'
     },
   ];
@@ -159,7 +160,7 @@ const AdminDashboard = () => {
             ))}
           </div>
 
-          {/* Recent Applications */}
+          {/* Recent Applications */}      
           <div className="bg-green-900 rounded-xl p-6 border border-green-700">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xl font-bold text-green-50">Recent Applications</h3>
@@ -205,9 +206,10 @@ const AdminDashboard = () => {
                         <td className="py-3 px-4">
                           <button 
                             onClick={() => navigate('/admin/applications')}
-                            className="text-green-400 hover:text-green-200 font-medium transition-colors"
+                            className="text-green-400 hover:text-green-200 font-medium transition-colors flex items-center gap-2"
                           >
-                            View →
+                            <span>View</span>
+                            <ChartIcon className="w-4 h-4 text-green-400" />
                           </button>
                         </td>
                       </tr>
@@ -228,7 +230,7 @@ const AdminDashboard = () => {
                   onClick={() => navigate('/admin/scholarships')}
                   className="w-full flex items-center gap-3 p-4 rounded-lg bg-green-800 hover:bg-green-700 text-green-50 transition-colors text-left"
                 >
-                  <span className="text-2xl">➕</span>
+                  <span className="text-2xl"><PlusIcon className="w-6 h-6" /></span>
                   <div>
                     <p className="font-semibold">Add New Scholarship</p>
                     <p className="text-sm text-green-300">Create a new scholarship program</p>
@@ -238,7 +240,7 @@ const AdminDashboard = () => {
                   onClick={() => navigate('/admin/applications')}
                   className="w-full flex items-center gap-3 p-4 rounded-lg bg-green-800 hover:bg-green-700 text-green-50 transition-colors text-left"
                 >
-                  <span className="text-2xl">📋</span>
+                  <span className="text-2xl"><ClipboardIcon className="w-6 h-6" /></span>
                   <div>
                     <p className="font-semibold">Review Applications</p>
                     <p className="text-sm text-green-300">Check pending applications</p>
@@ -248,7 +250,7 @@ const AdminDashboard = () => {
                   onClick={() => navigate('/admin/reports')}
                   className="w-full flex items-center gap-3 p-4 rounded-lg bg-green-800 hover:bg-green-700 text-green-50 transition-colors text-left"
                 >
-                  <span className="text-2xl">📊</span>
+                  <span className="text-2xl"><ChartIcon className="w-6 h-6" /></span>
                   <div>
                     <p className="font-semibold">Generate Report</p>
                     <p className="text-sm text-green-300">Download system reports</p>

@@ -16,5 +16,10 @@ adminRoutes.get('/admin_list', authenticateAdmin, adminController.getAllAdmins);
 adminRoutes.get("/logout", authenticateAdmin, adminController.adminLogout)
 adminRoutes.get('/applicants', authenticateAdmin, adminController.getAllApplicants)
 adminRoutes.get('/dashboard-stats', authenticateAdmin, adminController.getDashboardStats)
+const recentGradesController = require('../controller/recentGradesController');
+
+// Recent grades history for admins
+adminRoutes.get('/recent-grades', authenticateAdmin, recentGradesController.getAll);
+adminRoutes.get('/recent-grades/:studentId', authenticateAdmin, recentGradesController.getByStudent);
 
 module.exports = adminRoutes;

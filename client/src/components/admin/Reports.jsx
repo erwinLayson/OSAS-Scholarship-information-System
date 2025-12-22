@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import AdminLayout from './shareFIles/AdminLayout';
 import API from '../../API/fetchAPI';
+import { PeopleIcon, MoneyIcon, ClipboardIcon, SuccessIcon, ChartIcon, HourglassIcon } from '../shared/Icons';
 
 const Reports = () => {
   const [reportType, setReportType] = useState('students');
@@ -11,10 +12,10 @@ const Reports = () => {
   const [recentReportsData, setRecentReportsData] = useState([]);
 
   const [stats, setStats] = useState([
-    { title: 'Total Students', value: '...', icon: '👥', color: 'bg-blue-900', trend: '' },
-    { title: 'Total Scholarships', value: '...', icon: '💰', color: 'bg-green-900', trend: '' },
-    { title: 'Applications', value: '...', icon: '📋', color: 'bg-purple-900', trend: '' },
-    { title: 'Active Programs', value: '...', icon: '✅', color: 'bg-yellow-900', trend: '' },
+    { title: 'Total Students', value: '...', icon: <PeopleIcon className="w-8 h-8 text-blue-200" />, color: 'bg-blue-900', trend: '' },
+    { title: 'Total Scholarships', value: '...', icon: <MoneyIcon className="w-8 h-8 text-green-200" />, color: 'bg-green-900', trend: '' },
+    { title: 'Applications', value: '...', icon: <ClipboardIcon className="w-8 h-8 text-purple-200" />, color: 'bg-purple-900', trend: '' },
+    { title: 'Active Programs', value: '...', icon: <SuccessIcon className="w-8 h-8 text-yellow-200" />, color: 'bg-yellow-900', trend: '' },
   ]);
 
   useEffect(() => {
@@ -46,10 +47,10 @@ const Reports = () => {
         const activePrograms = scholarships.filter(s => (s.status || '').toLowerCase() === 'active').length;
 
         setStats([
-          { title: 'Total Students', value: String(students.length), icon: '👥', color: 'bg-blue-900', trend: '' },
-          { title: 'Total Scholarships', value: String(scholarships.length), icon: '💰', color: 'bg-green-900', trend: '' },
-          { title: 'Applications', value: String(applications.length), icon: '📋', color: 'bg-purple-900', trend: '' },
-          { title: 'Active Programs', value: String(activePrograms), icon: '✅', color: 'bg-yellow-900', trend: '' },
+          { title: 'Total Students', value: String(students.length), icon: <PeopleIcon className="w-8 h-8 text-blue-200" />, color: 'bg-blue-900', trend: '' },
+          { title: 'Total Scholarships', value: String(scholarships.length), icon: <MoneyIcon className="w-8 h-8 text-green-200" />, color: 'bg-green-900', trend: '' },
+          { title: 'Applications', value: String(applications.length), icon: <ClipboardIcon className="w-8 h-8 text-purple-200" />, color: 'bg-purple-900', trend: '' },
+          { title: 'Active Programs', value: String(activePrograms), icon: <SuccessIcon className="w-8 h-8 text-yellow-200" />, color: 'bg-yellow-900', trend: '' },
         ]);
         // fetch reports summary and recent
         try {
@@ -74,9 +75,9 @@ const Reports = () => {
   }, []);
 
   const reportTypes = [
-    { value: 'students', label: 'Student Records Report', icon: '👥' },
-    { value: 'scholarships', label: 'Scholarship Programs Report', icon: '💰' },
-    { value: 'applications', label: 'Applications Report', icon: '📋' },
+    { value: 'students', label: 'Student Records Report', icon: <PeopleIcon className="w-6 h-6" /> },
+    { value: 'scholarships', label: 'Scholarship Programs Report', icon: <MoneyIcon className="w-6 h-6" /> },
+    { value: 'applications', label: 'Applications Report', icon: <ClipboardIcon className="w-6 h-6" /> },
   ];
 
   const recentReports = recentReportsData && recentReportsData.length > 0 ? recentReportsData.map(r => ({
@@ -289,7 +290,7 @@ const Reports = () => {
                 <div className="bg-green-800 p-4 rounded-lg">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-green-300 text-sm">Total Reports Generated</span>
-                    <span className="text-2xl">📊</span>
+                    <span className="text-2xl"><ChartIcon className="w-6 h-6 text-green-300" /></span>
                   </div>
                   <p className="text-2xl font-bold text-green-50">{summary ? summary.totalReportsGenerated : '...'}</p>
                   <p className="text-green-400 text-xs mt-1">This month</p>
@@ -298,7 +299,7 @@ const Reports = () => {
                 <div className="bg-green-800 p-4 rounded-lg">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-green-300 text-sm">Storage Used</span>
-                    <span className="text-2xl">💾</span>
+                    <span className="text-2xl"><ClipboardIcon className="w-6 h-6 text-green-300" /></span>
                   </div>
                   <p className="text-2xl font-bold text-green-50">{summary ? `${(summary.storageUsedBytes/1024/1024).toFixed(2)} MB` : '...'}</p>
                   <p className="text-green-400 text-xs mt-1">Of 500 MB available</p>
@@ -307,7 +308,7 @@ const Reports = () => {
                 <div className="bg-green-800 p-4 rounded-lg">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-green-300 text-sm">Last Generated</span>
-                    <span className="text-2xl">⏰</span>
+                    <span className="text-2xl"><HourglassIcon className="w-6 h-6 text-green-300" /></span>
                   </div>
                   <p className="text-lg font-bold text-green-50">{summary && summary.lastGenerated ? new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(summary.lastGenerated.created_at)) : 'N/A'}</p>
                   <p className="text-green-400 text-xs mt-1">{summary && summary.lastGenerated ? summary.lastGenerated.name : ''}</p>
@@ -316,7 +317,7 @@ const Reports = () => {
                 <div className="bg-green-800 p-4 rounded-lg">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-green-300 text-sm">Most Generated</span>
-                    <span className="text-2xl">📈</span>
+                    <span className="text-2xl"><ChartIcon className="w-6 h-6 text-green-300" /></span>
                   </div>
                   <p className="text-lg font-bold text-green-50">{summary && summary.mostGenerated ? summary.mostGenerated.type : 'N/A'}</p>
                   <p className="text-green-400 text-xs mt-1">{summary && summary.mostGenerated ? `${summary.mostGenerated.cnt} reports this month` : ''}</p>

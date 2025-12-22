@@ -5,6 +5,8 @@ const {approvalMail, rejectionMail} = require("./shared/mailer");
 const Students = require('../model/studentModel');
 const Applicants = require("../model/applicantsModel");
 const Applicant_history = require("../model/applicant_historyModel");
+const RecentGrades = require('../model/recent_grades');
+const Settings = require('../model/settingsModel');
 
 
 const studentController = {
@@ -260,21 +262,106 @@ const studentController = {
 
             const runChecks = (i) => {
                 if (i >= checks.length) {
-                    // perform update
-                    Students.updateStudent(studentId, updateData, (err2, updateRes) => {
-                        if (err2) return studentController.errorMessage(res, 500, { message: err2.message || 'Internal server error', success: false });
-                        // If username was changed, re-issue student JWT so token matches new username
-                        const newUsername = updateData.username || student.username;
-                        try {
-                            const newToken = require('jsonwebtoken').sign({ username: newUsername, id: studentId }, process.env.STUDENT_LOGIN_SECRET_KEY, { expiresIn: '1h' });
-                            res.cookie('studentLogin', newToken, { sameSite: 'lax', httpOnly: true, secure: false });
-                            return studentController.successMessage(res, 200, { message: 'Profile updated successfully', success: true, token: newToken }, updateRes);
-                        } catch (e) {
-                            // token issuance failed, still return success
-                            console.warn('Failed to sign new token after profile update', e && e.message);
-                            return studentController.successMessage(res, 200, { message: 'Profile updated successfully', success: true }, updateRes);
-                        }
-                    });
+                            // perform update
+                            const performUpdate = () => {
+                                Students.updateStudent(studentId, updateData, (err2, updateRes) => {
+                                    if (err2) return studentController.errorMessage(res, 500, { message: err2.message || 'Internal server error', success: false });
+
+                                    // If username was changed, re-issue student JWT so token matches new username
+                                    const newUsername = updateData.username || student.username;
+                                    try {
+                                        const newToken = require('jsonwebtoken').sign({ username: newUsername, id: studentId }, process.env.STUDENT_LOGIN_SECRET_KEY, { expiresIn: '1h' });
+                                        res.cookie('studentLogin', newToken, { sameSite: 'lax', httpOnly: true, secure: false });
+                                        return studentController.successMessage(res, 200, { message: 'Profile updated successfully', success: true, token: newToken }, updateRes);
+                                    } catch (e) {
+                                        // token issuance failed, still return success
+                                        console.warn('Failed to sign new token after profile update', e && e.message);
+                                        return studentController.successMessage(res, 200, { message: 'Profile updated successfully', success: true }, updateRes);
+                                    }
+                                });
+                            };
+
+                            // If subjects were provided in the update, enforce one-update-per-semester and save the PREVIOUS subjects snapshot to recent_grades before updating
+                            if (updateData.subjects) {
+                                try {
+                                    const getCurrentSemester = () => {
+                                        const now = new Date();
+                                        const year = now.getFullYear();
+                                        const month = now.getMonth() + 1; // 1-12
+                                        const sem = month >= 7 ? 'S2' : 'S1';
+                                        return `${year}-${sem}`;
+                                    };
+
+                                    const semester = getCurrentSemester();
+
+                                    // Enforce one-update-per-session: check current grade_edit_session and use admin-provided semester if present
+                                    Settings.getByKey('grade_edit_session', (setErr, setRes) => {
+                                        if (setErr) console.warn('Failed to read grade_edit_session', setErr && setErr.message ? setErr.message : setErr);
+                                        const sessionId = setRes && setRes.length > 0 ? (setRes[0].setting_value || '') : '';
+
+                                        // read admin-provided semester override
+                                        Settings.getByKey('grade_edit_semester', (sErr, sRes) => {
+                                            if (sErr) console.warn('Failed to read grade_edit_semester', sErr && sErr.message ? sErr.message : sErr);
+                                            const configuredSemester = sRes && sRes.length > 0 ? (sRes[0].setting_value || '') : '';
+                                            const semesterToUse = configuredSemester || semester;
+
+                                            const saveSnapshotAndUpdate = (sid) => {
+                                            try {
+                                                let previousSubjectsArr = [];
+                                                try {
+                                                    previousSubjectsArr = typeof student.subjects === 'string' ? JSON.parse(student.subjects) : student.subjects;
+                                                } catch (e) {
+                                                    previousSubjectsArr = [];
+                                                }
+
+                                                    const previousSubjectsStr = typeof student.subjects === 'string' ? student.subjects : JSON.stringify(previousSubjectsArr);
+                                                    let previousAverage = null;
+                                                    if (Array.isArray(previousSubjectsArr) && previousSubjectsArr.length > 0) {
+                                                        const total = previousSubjectsArr.reduce((acc, s) => acc + (Number(s.grade || s.score || 0) || 0), 0);
+                                                        previousAverage = Number((total / previousSubjectsArr.length).toFixed(2));
+                                                    }
+
+                                                    RecentGrades.addRecentGrade({ studentId, subjects: previousSubjectsStr, semester: semesterToUse, average: previousAverage, sessionId: sid }, (rgErr) => {
+                                                        if (rgErr) console.warn('Failed to save recent grades:', rgErr && rgErr.message ? rgErr.message : rgErr);
+                                                        // proceed with update regardless of snapshot result
+                                                        performUpdate();
+                                                    });
+                                            } catch (e) {
+                                                console.warn('Failed to prepare recent grades snapshot', e && e.message);
+                                                performUpdate();
+                                            }
+                                            };
+
+                                            if (sessionId) {
+                                                RecentGrades.getByStudentAndSession(studentId, sessionId, (checkErr, rows) => {
+                                                    if (checkErr) {
+                                                        console.warn('Failed to check session updates', checkErr && checkErr.message ? checkErr.message : checkErr);
+                                                        // fail-safe: still save snapshot and allow update
+                                                        return saveSnapshotAndUpdate(sessionId);
+                                                    }
+
+                                                    if (rows && rows.length > 0) {
+                                                        return studentController.errorMessage(res, 403, { message: 'You have already updated grades for the current admin-enabled session', success: false });
+                                                    }
+
+                                                    // not updated in this session yet -> save snapshot with session id and update
+                                                    return saveSnapshotAndUpdate(sessionId);
+                                                });
+                                            } else {
+                                                // no session id configured: fallback to saving snapshot without session
+                                                return saveSnapshotAndUpdate('');
+                                            }
+                                        });
+                                    });
+                                } catch (e) {
+                                    console.warn('Failed to prepare recent grades payload', e && e.message);
+                                    // still proceed with update
+                                    performUpdate();
+                                }
+                                return;
+                            }
+
+                            performUpdate();
                     return;
                 }
 
