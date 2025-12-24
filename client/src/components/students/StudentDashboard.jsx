@@ -219,7 +219,7 @@ const StudentDashboard = () => {
   const gradeStatus = getGradeStatus();
 
   // derived grade info for recent display (use editing buffer when editing)
-  const currentList = allowGradeEdit ? (Array.isArray(editingGrades) ? editingGrades : []) : subjects;
+  const currentList = (allowGradeEdit && !hasUpdatedThisSemester) ? (Array.isArray(editingGrades) ? editingGrades : []) : subjects;
   const totalUnits = currentList.reduce((sum, s) => sum + (Number(s.unit) || 0), 0);
   const recentGrades = currentList.length > 0 ? currentList.slice(-5).slice().reverse() : [];
   const recentAverage = (() => {
@@ -689,7 +689,7 @@ const StudentDashboard = () => {
                 <div className="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center text-white font-bold">
                   {index + 1}
                 </div>
-                {allowGradeEdit ? (
+                {allowGradeEdit && !hasUpdatedThisSemester ? (
                   <input
                     type="text"
                     value={editingGrades[index]?.subject ?? subject.subject ?? ''}
@@ -706,7 +706,7 @@ const StudentDashboard = () => {
                 )}
               </div>
               <div className="flex items-center space-x-3 w-1/5 justify-end">
-                {allowGradeEdit ? (
+                {allowGradeEdit && !hasUpdatedThisSemester ? (
                   <input
                     type="number"
                     value={editingGrades[index]?.unit ?? subject.unit ?? ''}
@@ -723,7 +723,7 @@ const StudentDashboard = () => {
                 )}
               </div>
               <div className="flex items-center space-x-3 w-1/3 justify-end">
-                {allowGradeEdit ? (
+                {allowGradeEdit && !hasUpdatedThisSemester ? (
                   <div className="flex items-center gap-2">
                     <input
                       type="text"

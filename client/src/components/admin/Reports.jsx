@@ -10,6 +10,11 @@ const Reports = () => {
   const [status, setStatus] = useState('All');
   const [summary, setSummary] = useState(null);
   const [recentReportsData, setRecentReportsData] = useState([]);
+  // Recent reports filters / search (separate from generate form)
+  const [searchQuery, setSearchQuery] = useState('');
+  const [recentFrom, setRecentFrom] = useState('');
+  const [recentTo, setRecentTo] = useState('');
+  const [recentStatus, setRecentStatus] = useState('All');
 
   const [stats, setStats] = useState([
     { title: 'Total Students', value: '...', icon: <PeopleIcon className="w-8 h-8 text-blue-200" />, color: 'bg-blue-900', trend: '' },
@@ -90,6 +95,39 @@ const Reports = () => {
     status: r.status || 'Ready',
     filename: r.filename
   })) : [];
+
+  // client-side filtered list for the Recent Reports table
+  const filteredReports = recentReports.filter((report) => {
+    // search
+    const q = searchQuery.trim().toLowerCase();
+    if (q) {
+      const hay = `${report.name} ${report.type} ${report.generatedBy} ${report.filename}`.toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+
+    // status
+    if (recentStatus && recentStatus !== 'All') {
+      if ((report.status || '').toLowerCase() !== recentStatus.toLowerCase()) return false;
+    }
+
+    // date range
+    if (recentFrom) {
+      const from = new Date(recentFrom);
+      const rdate = new Date(report.date);
+      if (isNaN(from) === false && rdate < from) return false;
+    }
+    if (recentTo) {
+      const to = new Date(recentTo);
+      const rdate = new Date(report.date);
+      // include the day by setting end of day
+      if (isNaN(to) === false) {
+        to.setHours(23,59,59,999);
+        if (rdate > to) return false;
+      }
+    }
+
+    return true;
+  });
 
   const handleGenerateReport = () => {
     // Call server to generate CSV and download
@@ -298,15 +336,6 @@ const Reports = () => {
 
                 <div className="bg-green-800 p-4 rounded-lg">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-green-300 text-sm">Storage Used</span>
-                    <span className="text-2xl"><ClipboardIcon className="w-6 h-6 text-green-300" /></span>
-                  </div>
-                  <p className="text-2xl font-bold text-green-50">{summary ? `${(summary.storageUsedBytes/1024/1024).toFixed(2)} MB` : '...'}</p>
-                  <p className="text-green-400 text-xs mt-1">Of 500 MB available</p>
-                </div>
-
-                <div className="bg-green-800 p-4 rounded-lg">
-                  <div className="flex items-center justify-between mb-2">
                     <span className="text-green-300 text-sm">Last Generated</span>
                     <span className="text-2xl"><HourglassIcon className="w-6 h-6 text-green-300" /></span>
                   </div>
@@ -335,9 +364,43 @@ const Reports = () => {
                 <h3 className="text-2xl font-bold text-green-50">Recent Reports</h3>
                 <p className="text-green-300 text-sm mt-1">Previously generated reports</p>
               </div>
-              <button className="px-4 py-2 bg-green-700 text-green-100 rounded-lg hover:bg-green-600 transition-colors font-medium text-sm">
-                View All
-              </button>
+              <div className="flex items-center gap-3">
+                <input
+                  placeholder="Search reports..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="px-3 py-2 rounded-lg bg-green-800 text-green-100 border border-green-700 focus:outline-none focus:ring-2 focus:ring-green-400 text-sm"
+                />
+                <input
+                  type="date"
+                  value={recentFrom}
+                  onChange={(e) => setRecentFrom(e.target.value)}
+                  className="px-3 py-2 rounded-lg bg-green-800 text-green-100 border border-green-700 focus:outline-none focus:ring-2 focus:ring-green-400 text-sm"
+                />
+                <input
+                  type="date"
+                  value={recentTo}
+                  onChange={(e) => setRecentTo(e.target.value)}
+                  className="px-3 py-2 rounded-lg bg-green-800 text-green-100 border border-green-700 focus:outline-none focus:ring-2 focus:ring-green-400 text-sm"
+                />
+                <select
+                  value={recentStatus}
+                  onChange={(e) => setRecentStatus(e.target.value)}
+                  className="px-3 py-2 rounded-lg bg-green-800 text-green-100 border border-green-700 focus:outline-none focus:ring-2 focus:ring-green-400 text-sm"
+                >
+                  <option value="All">All</option>
+                  <option value="Ready">Ready</option>
+                  <option value="Processing">Processing</option>
+                  <option value="Failed">Failed</option>
+                  <option value="Completed">Completed</option>
+                </select>
+                <button
+                  onClick={() => { setSearchQuery(''); setRecentFrom(''); setRecentTo(''); setRecentStatus('All'); }}
+                  className="px-3 py-2 bg-green-700 text-green-100 rounded-lg hover:bg-green-600 transition-colors font-medium text-sm"
+                >
+                  Clear
+                </button>
+              </div>
             </div>
           </div>
 
@@ -355,7 +418,7 @@ const Reports = () => {
                 </tr>
               </thead>
               <tbody>
-                {recentReports.map((report) => (
+                {filteredReports.map((report) => (
                   <tr key={report.id} className="border-t border-green-800 hover:bg-green-800/50 transition-colors">
                     <td className="py-4 px-6 text-green-50 font-medium">{report.name}</td>
                     <td className="py-4 px-6">
