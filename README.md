@@ -1,4 +1,4 @@
-**Instructor:** @florynmaee  
+**Instructor:** @florlynmaee
 
 **OSAS Scholarship Information System**  
 Developed by the Project Team
