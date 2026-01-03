@@ -1,3 +1,4 @@
+**SECTION:**  BSIT -3C
 **Instructor:** @florlynmaee
 
 **OSAS Scholarship Information System**  
