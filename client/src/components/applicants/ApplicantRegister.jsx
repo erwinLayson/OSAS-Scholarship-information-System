@@ -175,7 +175,7 @@ const ApplicantRegister = () => {
               <label htmlFor="subjects" className="block text-sm font-semibold text-gray-700 mb-2">
                 Subjects, Grades & Units <span className="text-red-500">*</span>
               </label>
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-col md:flex-row">
                 <div className="relative flex-1">
                   <div className="absolute top-3 left-0 pl-3 flex items-center pointer-events-none">
                     <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -192,27 +192,30 @@ const ApplicantRegister = () => {
                     placeholder="Enter subject name"
                   />
                 </div>
-                <div className="relative w-24">
-                  <input
-                    type="text"
-                    inputMode="decimal"
-                    value={gradeInput}
-                    onChange={handleGradeInputChange}
-                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddSubject())}
-                    className="w-full px-4 py-3 bg-white text-gray-800 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition duration-200 placeholder-gray-400"
-                    placeholder="Grade"
-                  />
+                <div className="flex gap-2">
+                  <div className="relative w-24">
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={gradeInput}
+                      onChange={handleGradeInputChange}
+                      onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddSubject())}
+                      className="w-full px-4 py-3 bg-white text-gray-800 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition duration-200 placeholder-gray-400"
+                      placeholder="Grade"
+                    />
+                  </div>
+                  <div className="relative w-20">
+                    <input
+                      type="text"
+                      value={unitInput}
+                      onChange={e => setUnitInput(e.target.value)}
+                      onKeyPress={e => e.key === 'Enter' && (e.preventDefault(), handleAddSubject())}
+                      className="w-full px-4 py-3 bg-white text-gray-800 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition duration-200 placeholder-gray-400"
+                      placeholder="Unit"
+                    />
+                  </div>
                 </div>
-                <div className="relative w-20">
-                  <input
-                    type="text"
-                    value={unitInput}
-                    onChange={e => setUnitInput(e.target.value)}
-                    onKeyPress={e => e.key === 'Enter' && (e.preventDefault(), handleAddSubject())}
-                    className="w-full px-4 py-3 bg-white text-gray-800 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition duration-200 placeholder-gray-400"
-                    placeholder="Unit"
-                  />
-                </div>
+
                 <button
                   type="button"
                   onClick={handleAddSubject}
