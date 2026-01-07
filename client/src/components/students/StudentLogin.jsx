@@ -61,7 +61,7 @@ const StudentLogin = () => {
   return (
     <div className="min-h-screen flex justify-between flex-col gap-10 w-full bg-gradient-to-br from-green-800 via-green-700 to-emerald-800">
       <Navbar/>
-      <main className='flex justify-center items-center'>
+      <main className='flex justify-center items-center p-5'>
         <div className="w-full max-w-md">
           {/* Login Card */}
           <div className="bg-white rounded-2xl shadow-2xl p-8 border border-green-200">

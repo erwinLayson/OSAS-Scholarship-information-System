@@ -8,7 +8,7 @@ export function Navbar() {
   return (
     <>
       <header className="flex justify-between items-center p-5 shadow-lg text-white">
-        <NavLink to='/home' className="text-3xl font-bold cursor-pointer">OSAS Scholarship Application</NavLink>
+        <NavLink to='/home' className="md:text-3xl text-md font-bold cursor-pointer">OSAS Scholarship Application</NavLink>
 
         <nav className="block">
           <ul className="hidden md:flex gap-10 text-lg font-semibold">

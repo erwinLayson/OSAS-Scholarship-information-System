@@ -8,7 +8,7 @@ const path = require('path');
 const server = express();
 
 server.use(cors({
-    origin: "http://localhost:5174",
+    origin: "https://erwinlayson.github.io",
     credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization'],
     methods: ['GET','POST','PUT','DELETE','OPTIONS']
