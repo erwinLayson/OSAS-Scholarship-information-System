@@ -4,6 +4,10 @@ import API from '../../API/fetchAPI';
 import { useToast } from '../../hooks/useToast';
 import Toast from '../shared/Toast';
 
+import { Footer, Navbar } from '../shared/components';
+
+
+
 const AdminLogin = () => {
   const navigate = useNavigate();
   const { toasts, showToast, hideToast } = useToast();
@@ -56,8 +60,11 @@ const AdminLogin = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-800 via-green-700 to-emerald-800">
-      <div className="w-full max-w-md p-8">
+    <div className="min-h-screen flex flex-col w-full justify-between bg-gradient-to-br from-green-800 via-green-700 to-emerald-800">
+      <Navbar/>
+
+      <main className='w-full flex justify-center items-center'>
+        <div className="w-full max-w-md p-8">
         {/* Login Card */}
         <div className="bg-green-900 rounded-2xl shadow-2xl p-8 border border-green-700">
           {/* Header */}
@@ -161,15 +168,6 @@ const AdminLogin = () => {
           {/* Footer */}
           <div className="mt-6 text-center space-y-2">
             <p className="text-sm text-green-200">
-              Are you a student?{' '}
-              <button
-                onClick={() => navigate('/student/login')}
-                className="font-medium text-green-300 hover:text-green-100 transition duration-200 underline"
-              >
-                Student Login Portal
-              </button>
-            </p>
-            <p className="text-sm text-green-200">
               Need help?{' '}
               <a href="#" className="font-medium text-green-300 hover:text-green-100 transition duration-200">
                 Contact Support
@@ -195,6 +193,9 @@ const AdminLogin = () => {
           onClose={() => hideToast(toast.id)}
         />
       ))}
+      </main>
+
+      <Footer/>
     </div>
   );
 };

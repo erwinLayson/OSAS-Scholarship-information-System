@@ -15,6 +15,7 @@ import Settings from "./components/admin/Settings";
 
 // Protec routes
 import ProtectedRoutes from "./components/private/protectRoutes"
+import { LandingPages } from "./components/shared/LandingPages";
 
 function App() {
 
@@ -26,6 +27,7 @@ function App() {
           <Route path='/login' element={<AdminLogin/>} />
           <Route path='/student/login' element={<StudentLogin/>} />
           <Route path='/register' element={<ApplicantRegister/>} />
+          <Route path='/home' element={<LandingPages/>} />
           
           {/* Protected Student Routes */}
           <Route path='/student/dashboard' element={<StudentDashboard/>} />

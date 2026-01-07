@@ -33,5 +33,5 @@ export default function ProtectedRoutes ({ elements, url }) {
         );
     }
 
-    return !login ? <Navigate to={'/login'} /> : elements;
+    return !login ? <Navigate to={'/home'} /> : elements;
 }
