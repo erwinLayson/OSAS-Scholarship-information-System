@@ -18,22 +18,32 @@ class adminController {
         const { username, password } = req.body;
         
         if (username === "" || password === "") {
-            return errorMessage(res, 404, { message: "Fill up all feilds", success: false });
+            return errorMessage(res, 400, { message: "Fill up all fields", success: false });
         }
 
-        admin.getAll((err, data) => {
+        admin.getByUsername(username, (err, data) => {
             if (err) return errorMessage(res, 500, { message: "Internal server error", success: false });
 
             if (data.length <= 0) {
-                return errorMessage(res, 201, {message: "Invalid Username", success: false})
+                return errorMessage(res, 401, {message: "Invalid Username", success: false})
             }
 
             const adminCredential = data[0];
 
-            const passwordVerify = bcrypt.compareSync(password, adminCredential.password);
+            // Check if password exists in database record
+            if (!adminCredential.password) {
+                return errorMessage(res, 500, { message: "Account password not configured", success: false });
+            }
 
-            if (!passwordVerify) {
-                return errorMessage(res, 202, {message: "Incorrect Password", success: false})
+            try {
+                const passwordVerify = bcrypt.compareSync(password, adminCredential.password);
+
+                if (!passwordVerify) {
+                    return errorMessage(res, 401, { message: "Incorrect Password", success: false });
+                }
+            } catch (bcryptError) {
+                console.error("Password verification error:", bcryptError);
+                return errorMessage(res, 500, { message: "Password verification failed", success: false });
             }
 
             const token = jwt.sign({username}, SECRET_KEY, { expiresIn: "1h" })

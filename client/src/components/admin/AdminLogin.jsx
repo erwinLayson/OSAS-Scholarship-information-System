@@ -55,7 +55,9 @@ const AdminLogin = () => {
   
     } catch (err) {
       console.log(err);
-      showToast('Login failed. Please try again.', "error");
+      // Get the actual error message from the server response
+      const errorMessage = err.response?.data?.message || 'Login failed. Please try again.';
+      showToast(errorMessage, "error");
     }
   };
 

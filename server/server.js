@@ -8,7 +8,7 @@ const path = require('path');
 const server = express();
 
 server.use(cors({
-    origin: "http://localhost:5173",
+    origin: "http://localhost:5174",
     credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization'],
     methods: ['GET','POST','PUT','DELETE','OPTIONS']
