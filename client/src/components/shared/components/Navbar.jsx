@@ -27,13 +27,18 @@ export function Navbar() {
           </div>
         </nav>
       </header>
-      <aside className={`${navigate ? "block" : "hidden"} shadow-lg bg-white p-5 fixed right-5 top-[6rem] rounded-lg`}>
+
+      <aside className={`${navigate ? "block" : "hidden"} shadow-lg bg-white py-10 px-5 absolute right-5 top-[6rem] rounded-lg`}>
         <ul className="flex flex-col gap-5 text-lg font-semibold">
-            <li className="w-full hover:shadow-lg p-3 rounded-lg">
-              <NavLink to={"/login"}>Admin Login</NavLink>
+            <li className="flex justify-center items-center">
+            <NavLink to={"/login"} className={({ isActive }) => (
+               `p-3 shadow-lg w-full rounded-lg hover:bg-green-500 hover:text-white active:bg-green-500 ${isActive ? "bg-green-500 text-white" : ""}`
+              )}>Admin Login</NavLink>
             </li>
-            <li className="hover:shadow-lg active:shadow-lg p-3 rounded-lg">
-              <NavLink to={"/student/login"}>Student Login</NavLink>
+            <li>
+            <NavLink to={"/student/login"} className={({ isActive }) => (
+               `p-3 rounded-lg shadow-lg hover:bg-green-500 hover:text-white active:bg-green-500 ${isActive ? "bg-green-500 text-white" : ""}`
+              )}>Student Login</NavLink>
             </li>
           </ul>
       </aside>

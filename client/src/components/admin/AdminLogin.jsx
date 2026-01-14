@@ -177,13 +177,6 @@ const AdminLogin = () => {
             </p>
           </div>
         </div>
-
-        {/* Additional Info */}
-        <div className="mt-6 text-center">
-          <p className="text-sm text-green-300">
-            © 2025 OSAS System. All rights reserved.
-          </p>
-        </div>
       </div>
 
       {/* Toast Notifications */}

@@ -157,13 +157,6 @@ const StudentLogin = () => {
               </p>
             </div>
           </div>
-
-          {/* Additional Info */}
-          <div className="text-center mt-6">
-            <p className="text-green-100 text-sm">
-              © 2025 OSAS Scholarship System. All rights reserved.
-            </p>
-          </div>
         </div>
 
         {/* Toast Notifications */}
