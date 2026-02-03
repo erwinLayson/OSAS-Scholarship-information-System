@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import AdminLayout from './shareFIles/AdminLayout';
 import API from '../../API/fetchAPI';
-import { PeopleIcon, MoneyIcon, ClipboardIcon, SuccessIcon, ChartIcon, HourglassIcon } from '../shared/Icons';
+import { StatCard, Card, Badge, Button } from '../shared/ui';
+import { PeopleIcon, MoneyIcon, ClipboardIcon, SuccessIcon, ChartIcon, HourglassIcon, SearchIcon, DownloadIcon, TrashIcon, FileTextIcon } from '../shared/Icons';
 
 const Reports = () => {
   const [reportType, setReportType] = useState('students');
@@ -16,12 +17,12 @@ const Reports = () => {
   const [recentTo, setRecentTo] = useState('');
   const [recentStatus, setRecentStatus] = useState('All');
 
-  const [stats, setStats] = useState([
-    { title: 'Total Students', value: '...', icon: <PeopleIcon className="w-8 h-8 text-blue-200" />, color: 'bg-blue-900', trend: '' },
-    { title: 'Total Scholarships', value: '...', icon: <MoneyIcon className="w-8 h-8 text-green-200" />, color: 'bg-green-900', trend: '' },
-    { title: 'Applications', value: '...', icon: <ClipboardIcon className="w-8 h-8 text-purple-200" />, color: 'bg-purple-900', trend: '' },
-    { title: 'Active Programs', value: '...', icon: <SuccessIcon className="w-8 h-8 text-yellow-200" />, color: 'bg-yellow-900', trend: '' },
-  ]);
+  const [stats, setStats] = useState({
+    totalStudents: '...',
+    totalScholarships: '...',
+    applications: '...',
+    activePrograms: '...'
+  });
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -51,12 +52,12 @@ const Reports = () => {
 
         const activePrograms = scholarships.filter(s => (s.status || '').toLowerCase() === 'active').length;
 
-        setStats([
-          { title: 'Total Students', value: String(students.length), icon: <PeopleIcon className="w-8 h-8 text-blue-200" />, color: 'bg-blue-900', trend: '' },
-          { title: 'Total Scholarships', value: String(scholarships.length), icon: <MoneyIcon className="w-8 h-8 text-green-200" />, color: 'bg-green-900', trend: '' },
-          { title: 'Applications', value: String(applications.length), icon: <ClipboardIcon className="w-8 h-8 text-purple-200" />, color: 'bg-purple-900', trend: '' },
-          { title: 'Active Programs', value: String(activePrograms), icon: <SuccessIcon className="w-8 h-8 text-yellow-200" />, color: 'bg-yellow-900', trend: '' },
-        ]);
+        setStats({
+          totalStudents: String(students.length),
+          totalScholarships: String(scholarships.length),
+          applications: String(applications.length),
+          activePrograms: String(activePrograms)
+        });
         // fetch reports summary and recent
         try {
           const summaryRes = await API.get('/reports/summary');
@@ -80,9 +81,9 @@ const Reports = () => {
   }, []);
 
   const reportTypes = [
-    { value: 'students', label: 'Student Records Report', icon: <PeopleIcon className="w-6 h-6" /> },
-    { value: 'scholarships', label: 'Scholarship Programs Report', icon: <MoneyIcon className="w-6 h-6" /> },
-    { value: 'applications', label: 'Applications Report', icon: <ClipboardIcon className="w-6 h-6" /> },
+    { value: 'students', label: 'Student Records Report', icon: <PeopleIcon size="1.5rem" /> },
+    { value: 'scholarships', label: 'Scholarship Programs Report', icon: <MoneyIcon size="1.5rem" /> },
+    { value: 'applications', label: 'Applications Report', icon: <ClipboardIcon size="1.5rem" /> },
   ];
 
   const recentReports = recentReportsData && recentReportsData.length > 0 ? recentReportsData.map(r => ({
@@ -204,41 +205,53 @@ const Reports = () => {
 
   return (
     <AdminLayout activeMenu="reports" title="Reports" subtitle="Generate and manage system reports">
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-7xl mx-auto space-y-6">
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-          {stats.map((stat, index) => (
-            <div key={index} className={`${stat.color} rounded-xl p-6 border border-green-700`}>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-3xl">{stat.icon}</span>
-                <span className="text-green-300 text-sm font-semibold">{stat.trend}</span>
-              </div>
-              <h3 className="text-green-300 text-sm font-medium mb-1">{stat.title}</h3>
-              <p className="text-3xl font-bold text-green-50">{stat.value}</p>
-            </div>
-          ))}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <StatCard
+            title="Total Students"
+            value={stats.totalStudents}
+            icon={<PeopleIcon size="1.5rem" />}
+            color="blue"
+          />
+          <StatCard
+            title="Total Scholarships"
+            value={stats.totalScholarships}
+            icon={<MoneyIcon size="1.5rem" />}
+            color="emerald"
+          />
+          <StatCard
+            title="Applications"
+            value={stats.applications}
+            icon={<ClipboardIcon size="1.5rem" />}
+            color="purple"
+          />
+          <StatCard
+            title="Active Programs"
+            value={stats.activePrograms}
+            icon={<SuccessIcon size="1.5rem" />}
+            color="amber"
+          />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Report Generator */}
           <div className="lg:col-span-2">
-            <div className="bg-green-900 rounded-xl p-6 border border-green-700 mb-6">
+            <Card>
               <div className="flex items-center gap-3 mb-6">
-                <div className="w-12 h-12 bg-green-700 rounded-lg flex items-center justify-center">
-                  <svg className="w-6 h-6 text-green-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
+                <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center">
+                  <FileTextIcon size="1.5rem" className="text-emerald-600" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-green-50">Generate Report</h3>
-                  <p className="text-green-300 text-sm">Select report type and date range</p>
+                  <h3 className="text-xl font-bold text-gray-900">Generate Report</h3>
+                  <p className="text-gray-500 text-sm">Select report type and date range</p>
                 </div>
               </div>
 
               <div className="space-y-4">
                 {/* Report Type Selection */}
                 <div>
-                  <label className="block text-green-200 text-sm font-semibold mb-2">
+                  <label className="block text-gray-700 text-sm font-semibold mb-2">
                     Report Type
                   </label>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -246,14 +259,14 @@ const Reports = () => {
                       <button
                         key={type.value}
                         onClick={() => setReportType(type.value)}
-                        className={`p-4 rounded-lg border-2 transition-all text-left ${
+                        className={`p-4 rounded-xl border-2 transition-all text-left ${
                           reportType === type.value
-                            ? 'bg-green-700 border-green-500 text-green-50'
-                            : 'bg-green-800 border-green-600 text-green-200 hover:bg-green-700'
+                            ? 'bg-emerald-50 border-emerald-500 text-emerald-700'
+                            : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'
                         }`}
                       >
                         <div className="flex items-center gap-3">
-                          <span className="text-2xl">{type.icon}</span>
+                          <span className={reportType === type.value ? 'text-emerald-600' : 'text-gray-500'}>{type.icon}</span>
                           <span className="font-medium">{type.label}</span>
                         </div>
                       </button>
@@ -264,38 +277,38 @@ const Reports = () => {
                 {/* Date Range */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-green-200 text-sm font-semibold mb-2">
+                    <label className="block text-gray-700 text-sm font-semibold mb-2">
                       From Date
                     </label>
                     <input
                       type="date"
                       value={dateFrom}
                       onChange={(e) => setDateFrom(e.target.value)}
-                      className="w-full px-4 py-3 bg-green-800 text-green-50 border border-green-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400"
+                      className="w-full px-4 py-2.5 bg-white text-gray-900 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     />
                   </div>
                   <div>
-                    <label className="block text-green-200 text-sm font-semibold mb-2">
+                    <label className="block text-gray-700 text-sm font-semibold mb-2">
                       To Date
                     </label>
                     <input
                       type="date"
                       value={dateTo}
                       onChange={(e) => setDateTo(e.target.value)}
-                      className="w-full px-4 py-3 bg-green-800 text-green-50 border border-green-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400"
+                      className="w-full px-4 py-2.5 bg-white text-gray-900 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     />
                   </div>
                 </div>
 
                 {/* Status Filter */}
                 <div>
-                  <label className="block text-green-200 text-sm font-semibold mb-2">
+                  <label className="block text-gray-700 text-sm font-semibold mb-2">
                     Filter by Status
                   </label>
                   <select
                     value={status}
                     onChange={(e) => setStatus(e.target.value)}
-                    className="w-full px-4 py-3 bg-green-800 text-green-50 border border-green-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400"
+                    className="w-full px-4 py-2.5 bg-white text-gray-900 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   >
                     <option value="All">All Status</option>
                     <option value="Active">Active</option>
@@ -306,165 +319,171 @@ const Reports = () => {
                 </div>
 
                 {/* Generate Button */}
-                <button
+                <Button
                   onClick={handleGenerateReport}
-                  className="w-full bg-gradient-to-r from-green-600 to-emerald-700 text-white font-bold py-4 px-6 rounded-lg hover:from-green-500 hover:to-emerald-600 transition-all transform hover:scale-[1.02] shadow-lg shadow-green-600/30 flex items-center justify-center gap-2"
+                  className="w-full flex items-center justify-center gap-2"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
+                  <FileTextIcon size="1.25rem" />
                   Generate Report
-                </button>
+                </Button>
               </div>
-            </div>
+            </Card>
           </div>
 
           {/* Quick Stats Summary */}
           <div className="lg:col-span-1">
-            <div className="bg-green-900 rounded-xl p-6 border border-green-700">
-              <h3 className="text-xl font-bold text-green-50 mb-4">Report Summary</h3>
-              
+            <Card title="Report Summary">
               <div className="space-y-4">
-                <div className="bg-green-800 p-4 rounded-lg">
+                <div className="bg-blue-50 p-4 rounded-xl">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-green-300 text-sm">Total Reports Generated</span>
-                    <span className="text-2xl"><ChartIcon className="w-6 h-6 text-green-300" /></span>
+                    <span className="text-blue-700 text-sm font-medium">Total Reports Generated</span>
+                    <ChartIcon size="1.25rem" className="text-blue-500" />
                   </div>
-                  <p className="text-2xl font-bold text-green-50">{summary ? summary.totalReportsGenerated : '...'}</p>
-                  <p className="text-green-400 text-xs mt-1">This month</p>
+                  <p className="text-2xl font-bold text-gray-900">{summary ? summary.totalReportsGenerated : '...'}</p>
+                  <p className="text-blue-600 text-xs mt-1">This month</p>
                 </div>
 
-                <div className="bg-green-800 p-4 rounded-lg">
+                <div className="bg-purple-50 p-4 rounded-xl">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-green-300 text-sm">Last Generated</span>
-                    <span className="text-2xl"><HourglassIcon className="w-6 h-6 text-green-300" /></span>
+                    <span className="text-purple-700 text-sm font-medium">Last Generated</span>
+                    <HourglassIcon size="1.25rem" className="text-purple-500" />
                   </div>
-                  <p className="text-lg font-bold text-green-50">{summary && summary.lastGenerated ? new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(summary.lastGenerated.created_at)) : 'N/A'}</p>
-                  <p className="text-green-400 text-xs mt-1">{summary && summary.lastGenerated ? summary.lastGenerated.name : ''}</p>
+                  <p className="text-lg font-bold text-gray-900">{summary && summary.lastGenerated ? new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(summary.lastGenerated.created_at)) : 'N/A'}</p>
+                  <p className="text-purple-600 text-xs mt-1">{summary && summary.lastGenerated ? summary.lastGenerated.name : ''}</p>
                 </div>
 
-                <div className="bg-green-800 p-4 rounded-lg">
+                <div className="bg-emerald-50 p-4 rounded-xl">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-green-300 text-sm">Most Generated</span>
-                    <span className="text-2xl"><ChartIcon className="w-6 h-6 text-green-300" /></span>
+                    <span className="text-emerald-700 text-sm font-medium">Most Generated</span>
+                    <ChartIcon size="1.25rem" className="text-emerald-500" />
                   </div>
-                  <p className="text-lg font-bold text-green-50">{summary && summary.mostGenerated ? summary.mostGenerated.type : 'N/A'}</p>
-                  <p className="text-green-400 text-xs mt-1">{summary && summary.mostGenerated ? `${summary.mostGenerated.cnt} reports this month` : ''}</p>
+                  <p className="text-lg font-bold text-gray-900">{summary && summary.mostGenerated ? summary.mostGenerated.type : 'N/A'}</p>
+                  <p className="text-emerald-600 text-xs mt-1">{summary && summary.mostGenerated ? `${summary.mostGenerated.cnt} reports this month` : ''}</p>
                 </div>
               </div>
-            </div>
+            </Card>
           </div>
         </div>
 
         {/* Recent Reports Table */}
-        <div className="bg-green-900 rounded-xl shadow-2xl border border-green-700 overflow-hidden mt-6">
-          <div className="p-6 border-b border-green-700">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-2xl font-bold text-green-50">Recent Reports</h3>
-                <p className="text-green-300 text-sm mt-1">Previously generated reports</p>
-              </div>
-              <div className="flex items-center gap-3">
+        <Card>
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
+            <div>
+              <h3 className="text-xl font-bold text-gray-900">Recent Reports</h3>
+              <p className="text-gray-500 text-sm mt-1">Previously generated reports</p>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="relative">
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                  <SearchIcon size="1rem" />
+                </div>
                 <input
                   placeholder="Search reports..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="px-3 py-2 rounded-lg bg-green-800 text-green-100 border border-green-700 focus:outline-none focus:ring-2 focus:ring-green-400 text-sm"
+                  className="pl-9 pr-3 py-2 rounded-lg bg-white text-gray-900 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
                 />
-                <input
-                  type="date"
-                  value={recentFrom}
-                  onChange={(e) => setRecentFrom(e.target.value)}
-                  className="px-3 py-2 rounded-lg bg-green-800 text-green-100 border border-green-700 focus:outline-none focus:ring-2 focus:ring-green-400 text-sm"
-                />
-                <input
-                  type="date"
-                  value={recentTo}
-                  onChange={(e) => setRecentTo(e.target.value)}
-                  className="px-3 py-2 rounded-lg bg-green-800 text-green-100 border border-green-700 focus:outline-none focus:ring-2 focus:ring-green-400 text-sm"
-                />
-                <select
-                  value={recentStatus}
-                  onChange={(e) => setRecentStatus(e.target.value)}
-                  className="px-3 py-2 rounded-lg bg-green-800 text-green-100 border border-green-700 focus:outline-none focus:ring-2 focus:ring-green-400 text-sm"
-                >
-                  <option value="All">All</option>
-                  <option value="Ready">Ready</option>
-                  <option value="Processing">Processing</option>
-                  <option value="Failed">Failed</option>
-                  <option value="Completed">Completed</option>
-                </select>
-                <button
-                  onClick={() => { setSearchQuery(''); setRecentFrom(''); setRecentTo(''); setRecentStatus('All'); }}
-                  className="px-3 py-2 bg-green-700 text-green-100 rounded-lg hover:bg-green-600 transition-colors font-medium text-sm"
-                >
-                  Clear
-                </button>
               </div>
+              <input
+                type="date"
+                value={recentFrom}
+                onChange={(e) => setRecentFrom(e.target.value)}
+                className="px-3 py-2 rounded-lg bg-white text-gray-900 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+              />
+              <input
+                type="date"
+                value={recentTo}
+                onChange={(e) => setRecentTo(e.target.value)}
+                className="px-3 py-2 rounded-lg bg-white text-gray-900 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+              />
+              <select
+                value={recentStatus}
+                onChange={(e) => setRecentStatus(e.target.value)}
+                className="px-3 py-2 rounded-lg bg-white text-gray-900 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+              >
+                <option value="All">All</option>
+                <option value="Ready">Ready</option>
+                <option value="Processing">Processing</option>
+                <option value="Failed">Failed</option>
+                <option value="Completed">Completed</option>
+              </select>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => { setSearchQuery(''); setRecentFrom(''); setRecentTo(''); setRecentStatus('All'); }}
+              >
+                Clear
+              </Button>
             </div>
           </div>
 
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-green-800">
-                <tr>
-                  <th className="text-left py-4 px-6 text-green-100 font-semibold">Report Name</th>
-                  <th className="text-left py-4 px-6 text-green-100 font-semibold">Type</th>
-                  <th className="text-left py-4 px-6 text-green-100 font-semibold">Generated By</th>
-                  <th className="text-left py-4 px-6 text-green-100 font-semibold">Date</th>
-                  <th className="text-left py-4 px-6 text-green-100 font-semibold">Size</th>
-                  <th className="text-left py-4 px-6 text-green-100 font-semibold">Status</th>
-                  <th className="text-left py-4 px-6 text-green-100 font-semibold">Actions</th>
+              <thead>
+                <tr className="border-b border-gray-100">
+                  <th className="text-left py-4 px-4 text-gray-600 font-semibold text-sm">Report Name</th>
+                  <th className="text-left py-4 px-4 text-gray-600 font-semibold text-sm">Type</th>
+                  <th className="text-left py-4 px-4 text-gray-600 font-semibold text-sm">Generated By</th>
+                  <th className="text-left py-4 px-4 text-gray-600 font-semibold text-sm">Date</th>
+                  <th className="text-left py-4 px-4 text-gray-600 font-semibold text-sm">Size</th>
+                  <th className="text-left py-4 px-4 text-gray-600 font-semibold text-sm">Status</th>
+                  <th className="text-left py-4 px-4 text-gray-600 font-semibold text-sm">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredReports.map((report) => (
-                  <tr key={report.id} className="border-t border-green-800 hover:bg-green-800/50 transition-colors">
-                    <td className="py-4 px-6 text-green-50 font-medium">{report.name}</td>
-                    <td className="py-4 px-6">
-                      <span className="px-3 py-1 bg-green-700 text-green-100 rounded-full text-sm font-medium">
-                        {report.type}
-                      </span>
-                    </td>
-                    <td className="py-4 px-6 text-green-200">{report.generatedBy}</td>
-                    <td className="py-4 px-6 text-green-200">
-                      {new Date(report.date).toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric'
-                      })}
-                    </td>
-                    <td className="py-4 px-6 text-green-200">{report.size}</td>
-                    <td className="py-4 px-6">
-                      <span className="px-3 py-1 bg-green-600 text-white rounded-full text-sm font-semibold">
-                        {report.status}
-                      </span>
-                    </td>
-                    <td className="py-4 px-6">
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleDownloadReport(report.id, report.filename)}
-                          className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-500 transition-colors text-sm font-medium flex items-center gap-1"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                          </svg>
-                          Download
-                        </button>
-                        <button
-                          onClick={() => handleDeleteReport(report.id)}
-                          className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-500 transition-colors text-sm font-medium"
-                        >
-                          Delete
-                        </button>
+                {filteredReports.length > 0 ? (
+                  filteredReports.map((report) => (
+                    <tr key={report.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
+                      <td className="py-4 px-4 text-gray-900 font-medium">{report.name}</td>
+                      <td className="py-4 px-4">
+                        <Badge variant="info">{report.type}</Badge>
+                      </td>
+                      <td className="py-4 px-4 text-gray-600">{report.generatedBy}</td>
+                      <td className="py-4 px-4 text-gray-600 text-sm">
+                        {new Date(report.date).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric'
+                        })}
+                      </td>
+                      <td className="py-4 px-4 text-gray-600">{report.size}</td>
+                      <td className="py-4 px-4">
+                        <Badge variant="success">{report.status}</Badge>
+                      </td>
+                      <td className="py-4 px-4">
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleDownloadReport(report.id, report.filename)}
+                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="Download"
+                          >
+                            <DownloadIcon size="1.125rem" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteReport(report.id)}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Delete"
+                          >
+                            <TrashIcon size="1.125rem" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="7" className="py-12 px-4 text-center text-gray-400">
+                      <div className="flex flex-col items-center gap-2">
+                        <FileTextIcon size="2rem" />
+                        <p>No reports found</p>
                       </div>
                     </td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>
-        </div>
+        </Card>
       </div>
     </AdminLayout>
   );

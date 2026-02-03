@@ -3,8 +3,10 @@ import API from "../../API/fetchAPI";
 import { useToast } from '../../hooks/useToast';
 import Toast from '../shared/Toast';
 import { NavLink } from 'react-router-dom';
-
-import { Navbar,Footer } from '../shared/components';
+import { Card, Button, Input } from '../shared/ui';
+import { UserIcon, MailIcon, BookIcon, PlusIcon, CloseIcon } from '../shared/Icons';
+import sksuLogo from '../../assets/sksu.png';
+import {Navbar} from "../shared/components"
 
 const ApplicantRegister = () => {
   const { toasts, showToast, hideToast } = useToast();
@@ -17,16 +19,16 @@ const ApplicantRegister = () => {
   const [gradeInput, setGradeInput] = useState('');
   const [unitInput, setUnitInput] = useState('');
   const [subjectList, setSubjectList] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   const handleGradeInputChange = (e) => {
     const val = e.target.value;
-    // Allow empty, digits and up to two decimal digits after the dot while typing
     if (val === '') {
       setGradeInput('');
       return;
     }
     if (!/^\d+(\.\d{0,2})?$/.test(val)) {
-      return; // ignore invalid keystrokes
+      return;
     }
     const num = parseFloat(val);
     if (!isNaN(num) && num > 5) {
@@ -35,6 +37,7 @@ const ApplicantRegister = () => {
     }
     setGradeInput(val);
   };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -57,7 +60,7 @@ const ApplicantRegister = () => {
       return;
     }
 
-    const gradeFormatted = num.toFixed(2); // ensure two decimal places like 3.00
+    const gradeFormatted = num.toFixed(2);
 
     setSubjectList(prev => [...prev, { subject: subjectInput.trim(), grade: gradeFormatted, unit: unitInput.trim() }]);
     setSubjectInput('');
@@ -71,7 +74,6 @@ const ApplicantRegister = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    // Only allow SKSU email addresses
     const email = (formData.email || '').trim();
     const sksuRegex = /^[\w.+-]+@sksu\.edu\.ph$/i;
     if (!sksuRegex.test(email)) {
@@ -85,173 +87,152 @@ const ApplicantRegister = () => {
       subjects: subjectList
     };
 
-      try {
-          const res = await API.post('/applicants/register', registrationData);
-          if (!res.data.success) {
-              showToast(res.data.message, "error");
-              return;
-          }
+    setLoading(true);
+    try {
+      const res = await API.post('/applicants/register', registrationData);
+      if (!res.data.success) {
+        showToast(res.data.message, "error");
+        return;
+      }
 
-          showToast(res.data.message, "success");
-          e.target.reset();
-          setSubjectList([]);
-          setFormData({
-            studentName: '',
-            email: '',
-            subjects: '',
-          });
-      } catch (err) {
-          console.log(err);
-          showToast("Registration failed. Please try again.", "error");
+      showToast(res.data.message, "success");
+      e.target.reset();
+      setSubjectList([]);
+      setFormData({
+        studentName: '',
+        email: '',
+        subjects: '',
+      });
+    } catch (err) {
+      console.log(err);
+      showToast("Registration failed. Please try again.", "error");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex flex-col justify-between bg-gradient-to-br from-green-800 via-green-700 to-emerald-800 gap-10">
+    <div className="min-h-screen flex flex-col bg-gray-50">
+      {/*Navbar */}
       <Navbar />
 
-      <main className='flex justify-center items-center px-5'> 
+      {/* Main Content */}
+      <main className="flex-1 flex items-center justify-center px-4 pb-12 mt-10">
         <div className="w-full max-w-2xl">
-          {/* Registration Card */}
-          <div className="bg-white rounded-2xl shadow-2xl p-8 border border-green-200">
-            {/* Header */}
-            <div className="text-center mb-8">
-              <div className="mx-auto w-16 h-16 bg-gradient-to-br from-green-600 to-emerald-700 rounded-full flex items-center justify-center mb-4 shadow-lg shadow-green-600/30">
-                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-                </svg>
-              </div>
-              <h2 className="text-3xl font-bold text-gray-800 mb-2">Student Registration</h2>
-              <p className="text-gray-600">Register for OSAS Scholarship System</p>
-            </div>
+          
 
-            {/* Form */}
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Student Name */}
-              <div>
-                <label htmlFor="studentName" className="block text-sm font-semibold text-gray-700 mb-2">
-                  Student Name <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
-                  </div>
-                  <input
-                    id="studentName"
-                    name="studentName"
-                    type="text"
-                    value={formData.studentName}
-                    onChange={handleChange}
-                    className="w-full pl-10 pr-4 py-3 bg-white text-gray-800 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition duration-200 placeholder-gray-400"
-                    placeholder="Enter your full name"
-                    required
-                  />
+          {/* Registration Card */}
+          <Card className="shadow-xl">
+            <form onSubmit={handleSubmit} className="space-y-5">
+              {/* Logo above card */}
+              <div className="text-center mb-8">
+                <div className="mx-auto w-20 h-20 bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-full flex items-center justify-center mb-4 shadow-xl shadow-emerald-500/30">
+                  <img src={sksuLogo} alt="SKSU Logo" className="w-20 h-20 object-contain" /> 
                 </div>
+                <h1 className="text-3xl font-bold text-gray-800 mb-2">Student Registration</h1>
+                <p className="text-gray-500">Register for OSAS Scholarship System</p>
               </div>
+
+              {/* Student Name */}
+              <Input
+                label="Student Name"
+                name="studentName"
+                type="text"
+                placeholder="Enter your full name"
+                icon={<UserIcon size="1.25rem" />}
+                value={formData.studentName}
+                onChange={handleChange}
+                required
+                disabled={loading}
+              />
 
               {/* Email Address */}
-              <div>
-                <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-2">
-                  Email Address <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
-                    </svg>
-                  </div>
-                  <input
-                    id="email"
-                    name="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    className="w-full pl-10 pr-4 py-3 bg-white text-gray-800 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition duration-200 placeholder-gray-400"
-                    placeholder="student@example.com"
-                    required
-                  />
-                </div>
-              </div>
+              <Input
+                label="Email Address"
+                name="email"
+                type="email"
+                placeholder="student@sksu.edu.ph"
+                icon={<MailIcon size="1.25rem" />}
+                value={formData.email}
+                onChange={handleChange}
+                hint="Only SKSU email addresses are allowed"
+                required
+                disabled={loading}
+              />
 
               {/* Subjects */}
               <div>
-                <label htmlFor="subjects" className="block text-sm font-semibold text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Subjects, Grades & Units <span className="text-red-500">*</span>
                 </label>
                 <div className="flex gap-2 flex-col md:flex-row">
                   <div className="relative flex-1">
-                    <div className="absolute top-3 left-0 pl-3 flex items-center pointer-events-none">
-                      <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                      </svg>
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                      <BookIcon size="1.25rem" />
                     </div>
                     <input
-                      id="subjects"
                       type="text"
                       value={subjectInput}
                       onChange={(e) => setSubjectInput(e.target.value)}
                       onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddSubject())}
-                      className="w-full pl-10 pr-4 py-3 bg-white text-gray-800 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition duration-200 placeholder-gray-400"
-                      placeholder="Enter subject name"
+                      className="w-full pl-11 pr-4 py-3 bg-white text-gray-900 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-500 transition-all placeholder:text-gray-400"
+                      placeholder="Subject name"
+                      disabled={loading}
                     />
                   </div>
                   <div className="flex gap-2">
-                    <div className="relative w-24">
-                      <input
-                        type="text"
-                        inputMode="decimal"
-                        value={gradeInput}
-                        onChange={handleGradeInputChange}
-                        onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddSubject())}
-                        className="w-full px-4 py-3 bg-white text-gray-800 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition duration-200 placeholder-gray-400"
-                        placeholder="Grade"
-                      />
-                    </div>
-                    <div className="relative w-20">
-                      <input
-                        type="text"
-                        value={unitInput}
-                        onChange={e => setUnitInput(e.target.value)}
-                        onKeyPress={e => e.key === 'Enter' && (e.preventDefault(), handleAddSubject())}
-                        className="w-full px-4 py-3 bg-white text-gray-800 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition duration-200 placeholder-gray-400"
-                        placeholder="Unit"
-                      />
-                    </div>
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={gradeInput}
+                      onChange={handleGradeInputChange}
+                      onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddSubject())}
+                      className="w-24 px-4 py-3 bg-white text-gray-900 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-500 transition-all placeholder:text-gray-400"
+                      placeholder="Grade"
+                      disabled={loading}
+                    />
+                    <input
+                      type="text"
+                      value={unitInput}
+                      onChange={e => setUnitInput(e.target.value)}
+                      onKeyPress={e => e.key === 'Enter' && (e.preventDefault(), handleAddSubject())}
+                      className="w-20 px-4 py-3 bg-white text-gray-900 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-500 transition-all placeholder:text-gray-400"
+                      placeholder="Units"
+                      disabled={loading}
+                    />
                   </div>
-
-                  <button
+                  <Button
                     type="button"
+                    variant="primary"
                     onClick={handleAddSubject}
-                    className="px-6 py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 transition duration-200 whitespace-nowrap"
+                    icon={<PlusIcon size="1rem" />}
+                    disabled={loading}
                   >
-                    Add Subject
-                  </button>
+                    Add
+                  </Button>
                 </div>
-                <p className="mt-2 text-sm text-gray-600">Enter subject name, grade, and unit, then click "Add Subject"</p>
+                <p className="mt-2 text-sm text-gray-500">Enter subject name, grade, and units, then click "Add"</p>
 
                 {/* Display Added Subjects */}
                 {subjectList.length > 0 && (
-                  <div className="mt-4 space-y-2">
-                    <p className="text-sm font-semibold text-gray-700">Added Subjects:</p>
+                  <div className="mt-4">
+                    <p className="text-sm font-semibold text-gray-700 mb-2">Added Subjects:</p>
                     <div className="flex flex-wrap gap-2">
                       {subjectList.map((item, index) => (
                         <div
                           key={index}
-                          className="flex items-center gap-2 bg-green-100 text-green-800 px-3 py-2 rounded-lg border border-green-300"
+                          className="flex items-center gap-2 bg-emerald-50 text-emerald-800 px-3 py-2 rounded-xl border border-emerald-200"
                         >
                           <span className="font-medium">{item.subject}</span>
-                          <span className="text-sm bg-green-600 text-white px-2 py-0.5 rounded">{item.grade}</span>
-                          <span className="text-xs bg-green-200 text-green-800 px-2 py-0.5 rounded">{item.unit} unit{item.unit === '1' ? '' : 's'}</span>
+                          <span className="text-sm bg-emerald-600 text-white px-2 py-0.5 rounded-lg">{item.grade}</span>
+                          <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-lg">{item.unit} unit{item.unit === '1' ? '' : 's'}</span>
                           <button
                             type="button"
                             onClick={() => handleRemoveSubject(index)}
-                            className="text-green-600 hover:text-red-600 transition-colors duration-200"
+                            className="text-emerald-600 hover:text-red-500 transition-colors ml-1"
+                            disabled={loading}
                           >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
+                            <CloseIcon size="1rem" />
                           </button>
                         </div>
                       ))}
@@ -265,43 +246,49 @@ const ApplicantRegister = () => {
                 <input
                   type="checkbox"
                   id="terms"
-                  className="w-4 h-4 mt-1 text-green-600 bg-white border-gray-300 rounded focus:ring-green-500"
+                  className="w-4 h-4 mt-1 text-emerald-600 bg-white border-gray-300 rounded focus:ring-emerald-500 cursor-pointer"
                   required
+                  disabled={loading}
                 />
                 <label htmlFor="terms" className="ml-3 text-sm text-gray-600">
                   I agree to the{' '}
-                  <a href="#" className="text-green-600 hover:text-green-700 font-medium transition duration-200">
+                  <a href="#" className="text-emerald-600 hover:text-emerald-700 font-medium transition-colors">
                     Terms and Conditions
                   </a>
                   {' '}and{' '}
-                  <a href="#" className="text-green-600 hover:text-green-700 font-medium transition duration-200">
+                  <a href="#" className="text-emerald-600 hover:text-emerald-700 font-medium transition-colors">
                     Privacy Policy
                   </a>
                 </label>
               </div>
 
               {/* Submit Button */}
-              <button
+              <Button
                 type="submit"
-                className="w-full bg-gradient-to-r from-green-600 to-emerald-700 text-white font-semibold py-3 px-4 rounded-lg hover:from-green-700 hover:to-emerald-800 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transform transition duration-200 hover:scale-[1.02] active:scale-[0.98] shadow-lg"
+                variant="primary"
+                fullWidth
+                loading={loading}
+                className="!py-3"
               >
                 Register
-              </button>
+              </Button>
             </form>
 
             {/* Footer */}
-            <div className="mt-6 text-center">
+            <div className="mt-6 pt-6 border-t border-gray-200 text-center">
               <p className="text-sm text-gray-600">
                 Already have an account?{' '}
-                <NavLink to={"/student/login"} className="font-medium text-green-600 hover:text-green-700 transition duration-200">
+                <NavLink to="/student/login" className="font-semibold text-emerald-600 hover:text-emerald-700 transition-colors">
                   Login here
                 </NavLink>
               </p>
             </div>
-          </div>
+          </Card>
         </div>
-        
-        {/* Toast Notifications */}
+      </main>
+
+      {/* Toast Notifications */}
+      <div className="fixed bottom-4 right-4 z-50 space-y-2">
         {toasts.map(toast => (
           <Toast
             key={toast.id}
@@ -310,9 +297,7 @@ const ApplicantRegister = () => {
             onClose={() => hideToast(toast.id)}
           />
         ))}
-      </main>
-
-      <Footer/>
+      </div>
     </div>
   );
 };

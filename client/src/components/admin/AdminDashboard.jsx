@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import AdminLayout from './shareFIles/AdminLayout';
 import API from '../../API/fetchAPI';
 import ActivityChart from './ActivityChart';
-import { PeopleIcon, ClipboardIcon, SuccessIcon, ChartIcon, PlusIcon } from '../shared/Icons';
+import { StatCard, Card, Badge, Button } from '../shared/ui';
+import { PeopleIcon, ClipboardIcon, SuccessIcon, ChartIcon, PlusIcon, EyeIcon, FileTextIcon } from '../shared/Icons';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -117,164 +118,179 @@ const AdminDashboard = () => {
 
   const chartData = useMemo(()=> buildSeries(chartView), [applicantsList, chartView]);
 
-  const statsDisplay = [
-    { 
-      title: 'Total Students', 
-      value: loading ? '...' : stats.totalStudents.toString(), 
-      icon: <PeopleIcon className="w-8 h-8 text-blue-200" />,
-      color: 'bg-blue-900'
-    },
-    { 
-      title: 'Pending Applications', 
-      value: loading ? '...' : stats.pendingApplications.toString(), 
-      icon: <ClipboardIcon className="w-8 h-8 text-yellow-200" />,
-      color: 'bg-yellow-900'
-    },
-    { 
-      title: 'Approved Applications', 
-      value: loading ? '...' : stats.approvedApplications.toString(), 
-      icon: <SuccessIcon className="w-8 h-8 text-green-200" />,
-      color: 'bg-green-900'
-    },
-    { 
-      title: 'Total Applications', 
-      value: loading ? '...' : stats.totalApplications.toString(), 
-      icon: <ChartIcon className="w-8 h-8 text-purple-200" />,
-      color: 'bg-purple-900'
-    },
-  ];
-
   return (
     <AdminLayout activeMenu="dashboard" title="Dashboard" subtitle="Welcome back, Admin!">
       <div className="max-w-7xl mx-auto space-y-6">
-          {/* Stats Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {statsDisplay.map((stat, index) => (
-              <div key={index} className={`${stat.color} rounded-xl p-6 border border-green-700 hover:border-green-500 transition-all duration-200 hover:shadow-lg hover:shadow-green-500/20`}>
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-3xl">{stat.icon}</span>
-                </div>
-                <h3 className="text-green-300 text-sm font-medium mb-1">{stat.title}</h3>
-                <p className="text-3xl font-bold text-green-50">{stat.value}</p>
-              </div>
-            ))}
-          </div>
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <StatCard
+            title="Total Students"
+            value={loading ? '...' : stats.totalStudents}
+            icon={<PeopleIcon size="1.5rem" />}
+            color="blue"
+          />
+          <StatCard
+            title="Pending Applications"
+            value={loading ? '...' : stats.pendingApplications}
+            icon={<ClipboardIcon size="1.5rem" />}
+            color="amber"
+          />
+          <StatCard
+            title="Approved Applications"
+            value={loading ? '...' : stats.approvedApplications}
+            icon={<SuccessIcon size="1.5rem" />}
+            color="emerald"
+          />
+          <StatCard
+            title="Total Applications"
+            value={loading ? '...' : stats.totalApplications}
+            icon={<ChartIcon size="1.5rem" />}
+            color="purple"
+          />
+        </div>
 
-          {/* Recent Applications */}      
-          <div className="bg-green-900 rounded-xl p-6 border border-green-700">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-green-50">Recent Applications</h3>
+        {/* Recent Applications */}      
+        <Card 
+          title="Recent Applications"
+          headerAction={
+            <Button 
+              onClick={() => navigate('/admin/applications')}
+              variant="secondary"
+              size="sm"
+            >
+              View All
+            </Button>
+          }
+        >
+          {loading ? (
+            <div className="flex justify-center items-center py-12">
+              <div className="inline-block animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-emerald-600"></div>
+            </div>
+          ) : recentApplications.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <FileTextIcon className="text-gray-400" size="2rem" />
+              </div>
+              <p className="text-gray-500 text-lg">No applications yet</p>
+              <p className="text-gray-400 text-sm mt-2">Applications will appear here when students apply</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="text-left py-3 px-4 text-gray-500 font-semibold text-sm">Student</th>
+                    <th className="text-left py-3 px-4 text-gray-500 font-semibold text-sm">Email</th>
+                    <th className="text-left py-3 px-4 text-gray-500 font-semibold text-sm">Status</th>
+                    <th className="text-left py-3 px-4 text-gray-500 font-semibold text-sm">Date</th>
+                    <th className="text-left py-3 px-4 text-gray-500 font-semibold text-sm">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recentApplications.map((app) => (
+                    <tr key={app.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                      <td className="py-3 px-4 text-gray-800 font-medium">{app.student}</td>
+                      <td className="py-3 px-4 text-gray-600">{app.email}</td>
+                      <td className="py-3 px-4">
+                        <Badge variant={app.status === 'Approved' ? 'success' : app.status === 'Rejected' ? 'error' : 'warning'}>
+                          {app.status}
+                        </Badge>
+                      </td>
+                      <td className="py-3 px-4 text-gray-600">{app.date}</td>
+                      <td className="py-3 px-4">
+                        <Button 
+                          variant="ghost"
+                          size="sm"
+                          icon={<EyeIcon size="1rem" />}
+                          onClick={() => navigate('/admin/applications')}
+                        >
+                          View
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Card>
+
+        {/* Quick Actions & Charts Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Quick Actions */}
+          <Card title="Quick Actions">
+            <div className="space-y-3">
+              <button 
+                onClick={() => navigate('/admin/scholarships')}
+                className="w-full flex items-center gap-4 p-4 rounded-xl bg-gradient-to-r from-emerald-50 to-emerald-100 hover:from-emerald-100 hover:to-emerald-200 border border-emerald-200 text-left transition-all hover:-translate-y-0.5 hover:shadow-md"
+              >
+                <div className="w-12 h-12 bg-emerald-200 rounded-xl flex items-center justify-center">
+                  <PlusIcon className="text-emerald-600" size="1.5rem" />
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-800">Add New Scholarship</p>
+                  <p className="text-sm text-gray-500">Create a new scholarship program</p>
+                </div>
+              </button>
               <button 
                 onClick={() => navigate('/admin/applications')}
-                className="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-500 transition-colors text-sm font-medium"
+                className="w-full flex items-center gap-4 p-4 rounded-xl bg-gradient-to-r from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 border border-blue-200 text-left transition-all hover:-translate-y-0.5 hover:shadow-md"
               >
-                View All
+                <div className="w-12 h-12 bg-blue-200 rounded-xl flex items-center justify-center">
+                  <ClipboardIcon className="text-blue-600" size="1.5rem" />
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-800">Review Applications</p>
+                  <p className="text-sm text-gray-500">Check pending applications</p>
+                </div>
+              </button>
+              <button 
+                onClick={() => navigate('/admin/reports')}
+                className="w-full flex items-center gap-4 p-4 rounded-xl bg-gradient-to-r from-purple-50 to-purple-100 hover:from-purple-100 hover:to-purple-200 border border-purple-200 text-left transition-all hover:-translate-y-0.5 hover:shadow-md"
+              >
+                <div className="w-12 h-12 bg-purple-200 rounded-xl flex items-center justify-center">
+                  <ChartIcon className="text-purple-600" size="1.5rem" />
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-800">Generate Report</p>
+                  <p className="text-sm text-gray-500">Download system reports</p>
+                </div>
               </button>
             </div>
-            {loading ? (
-              <div className="flex justify-center items-center py-12">
-                <div className="text-green-300">Loading applications...</div>
-              </div>
-            ) : recentApplications.length === 0 ? (
-              <div className="text-center py-12">
-                <p className="text-green-300 text-lg">No applications yet</p>
-                <p className="text-green-400 text-sm mt-2">Applications will appear here when students apply</p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-green-700">
-                      <th className="text-left py-3 px-4 text-green-300 font-semibold">Student</th>
-                      <th className="text-left py-3 px-4 text-green-300 font-semibold">Email</th>
-                      <th className="text-left py-3 px-4 text-green-300 font-semibold">Status</th>
-                      <th className="text-left py-3 px-4 text-green-300 font-semibold">Date</th>
-                      <th className="text-left py-3 px-4 text-green-300 font-semibold">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {recentApplications.map((app) => (
-                      <tr key={app.id} className="border-b border-green-800 hover:bg-green-800/50 transition-colors">
-                        <td className="py-3 px-4 text-green-50">{app.student}</td>
-                        <td className="py-3 px-4 text-green-200">{app.email}</td>
-                        <td className="py-3 px-4">
-                          <span className="px-3 py-1 rounded-full text-xs font-semibold bg-yellow-600 text-white">
-                            {app.status}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 text-green-200">{app.date}</td>
-                        <td className="py-3 px-4">
-                          <button 
-                            onClick={() => navigate('/admin/applications')}
-                            className="text-green-400 hover:text-green-200 font-medium transition-colors flex items-center gap-2"
-                          >
-                            <span>View</span>
-                            <ChartIcon className="w-4 h-4 text-green-400" />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
+          </Card>
 
-          {/* Quick Actions & Charts Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Quick Actions */}
-            <div className="bg-green-900 rounded-xl p-6 border border-green-700">
-              <h3 className="text-xl font-bold text-green-50 mb-4">Quick Actions</h3>
-              <div className="space-y-3">
+          {/* Activity Chart */}
+          <Card 
+            title="Activity Overview"
+            headerAction={
+              <div className="flex items-center gap-2">
                 <button 
-                  onClick={() => navigate('/admin/scholarships')}
-                  className="w-full flex items-center gap-3 p-4 rounded-lg bg-green-800 hover:bg-green-700 text-green-50 transition-colors text-left"
+                  onClick={()=>setChartView('daily')} 
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${chartView==='daily' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
                 >
-                  <span className="text-2xl"><PlusIcon className="w-6 h-6" /></span>
-                  <div>
-                    <p className="font-semibold">Add New Scholarship</p>
-                    <p className="text-sm text-green-300">Create a new scholarship program</p>
-                  </div>
+                  Daily
                 </button>
                 <button 
-                  onClick={() => navigate('/admin/applications')}
-                  className="w-full flex items-center gap-3 p-4 rounded-lg bg-green-800 hover:bg-green-700 text-green-50 transition-colors text-left"
+                  onClick={()=>setChartView('weekly')} 
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${chartView==='weekly' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
                 >
-                  <span className="text-2xl"><ClipboardIcon className="w-6 h-6" /></span>
-                  <div>
-                    <p className="font-semibold">Review Applications</p>
-                    <p className="text-sm text-green-300">Check pending applications</p>
-                  </div>
+                  Weekly
                 </button>
                 <button 
-                  onClick={() => navigate('/admin/reports')}
-                  className="w-full flex items-center gap-3 p-4 rounded-lg bg-green-800 hover:bg-green-700 text-green-50 transition-colors text-left"
+                  onClick={()=>setChartView('yearly')} 
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${chartView==='yearly' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
                 >
-                  <span className="text-2xl"><ChartIcon className="w-6 h-6" /></span>
-                  <div>
-                    <p className="font-semibold">Generate Report</p>
-                    <p className="text-sm text-green-300">Download system reports</p>
-                  </div>
+                  Yearly
                 </button>
               </div>
+            }
+          >
+            <div className="h-64 bg-gray-50 rounded-xl border border-gray-200 p-4">
+              <ActivityChart data={chartData} height={200} color="#10b981" />
             </div>
-
-            {/* Activity Chart */}
-            <div className="bg-green-900 rounded-xl p-6 border border-green-700">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-xl font-bold text-green-50">Activity Overview</h3>
-                <div className="flex items-center gap-2">
-                  <button onClick={()=>setChartView('daily')} className={`px-3 py-1 rounded ${chartView==='daily'?'bg-green-600':'bg-green-800'} text-sm`}>Daily</button>
-                  <button onClick={()=>setChartView('weekly')} className={`px-3 py-1 rounded ${chartView==='weekly'?'bg-green-600':'bg-green-800'} text-sm`}>Weekly</button>
-                  <button onClick={()=>setChartView('yearly')} className={`px-3 py-1 rounded ${chartView==='yearly'?'bg-green-600':'bg-green-800'} text-sm`}>Yearly</button>
-                </div>
-              </div>
-              <div className="h-64 bg-green-800/50 rounded-lg border border-green-700 p-4">
-                <ActivityChart data={chartData} height={200} color="#22c55e" />
-              </div>
-            </div>
-          </div>
+          </Card>
         </div>
+      </div>
     </AdminLayout>
   );
 };

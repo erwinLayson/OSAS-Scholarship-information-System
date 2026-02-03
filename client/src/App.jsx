@@ -1,4 +1,4 @@
-import { HashRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 import ApplicantRegister from './components/applicants/ApplicantRegister'
 import AdminLogin from "./components/admin/AdminLogin";
@@ -21,7 +21,7 @@ function App() {
 
   return (
     <>
-      <HashRouter>
+      <BrowserRouter>
         <Routes>
           {/* Public Routes */}
           <Route path='/login' element={<AdminLogin/>} />
@@ -43,7 +43,7 @@ function App() {
           <Route path='/admin/reports' element={<ProtectedRoutes url={'admin'} elements={<Reports/>}/>} />
           <Route path='/admin/settings' element={<ProtectedRoutes  url={'admin'} elements={<Settings/>}/>} />
         </Routes>
-      </HashRouter>
+      </BrowserRouter>
     </>
   )
 }
