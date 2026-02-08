@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import API from '../../API/fetchAPI';
-import AdminLayout from './shareFIles/AdminLayout';
+import AdminLayout from '../../components/admin/shareFIles/AdminLayout';
 import { useToast } from '../../hooks/useToast';
-import Toast from '../shared/Toast';
+import Toast from '../../components/shared/Toast';
 
 const ManageAdmin = () => {
   const { toasts, showToast, hideToast } = useToast();

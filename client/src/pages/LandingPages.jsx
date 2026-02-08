@@ -1,6 +1,6 @@
 import { NavLink } from "react-router-dom";
-import { Navbar, Footer } from "./components";
-import useScrollAnimation, { useCountUp } from "../../hooks/useScrollAnimation";
+import { Navbar, Footer } from "../components/shared/components";
+import useScrollAnimation, { useCountUp } from "../hooks/useScrollAnimation";
 import { 
   ShieldIcon, 
   ClockIcon, 
@@ -12,7 +12,7 @@ import {
   AwardIcon,
   FileTextIcon,
   StarIcon
-} from "./Icons";
+} from "../components/shared/Icons";
 
 // Placeholder images from Unsplash
 const HERO_IMAGE = "https://tse4.mm.bing.net/th/id/OIP.cseeid5aHXwHcMgpYt3YlAHaCv?rs=1&pid=ImgDetMain&o=7&rm=3";

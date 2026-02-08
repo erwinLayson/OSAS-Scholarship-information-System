@@ -1,6 +1,37 @@
 const Settings = require('../model/settingsModel');
 
 const settingsController = {
+  // Maintenance Mode
+  getMaintenanceMode: (req, res) => {
+    Settings.getByKey('maintenance_mode', (err, result) => {
+      if (err) return res.status(500).json({ message: err.message || 'Internal server error', success: false });
+      const row = (result && result.length > 0) ? result[0] : null;
+      const val = row ? (String(row.setting_value) === 'true') : false;
+      return res.status(200).json({ message: 'ok', success: true, value: val });
+    });
+  },
+
+  setMaintenanceMode: (req, res) => {
+    const { value } = req.body;
+    if (typeof value === 'undefined') return res.status(400).json({ message: 'Missing value', success: false });
+    const v = value ? 'true' : 'false';
+
+    Settings.upsert('maintenance_mode', v, (err) => {
+      if (err) return res.status(500).json({ message: err.message || 'Internal server error', success: false });
+      return res.status(200).json({ message: 'Maintenance mode updated', success: true, value: v === 'true' });
+    });
+  },
+
+  // Check maintenance mode (for login endpoints)
+  checkMaintenanceMode: (callback) => {
+    Settings.getByKey('maintenance_mode', (err, result) => {
+      if (err) return callback(err, false);
+      const row = (result && result.length > 0) ? result[0] : null;
+      const val = row ? (String(row.setting_value) === 'true') : false;
+      return callback(null, val);
+    });
+  },
+
   getAllowGradeEdit: (req, res) => {
     // return allow flag as well as current session id and semester so clients can detect prior updates
     Settings.getByKey('allow_grade_edit', (err, result) => {

@@ -7,6 +7,7 @@ const Applicants = require("../model/applicantsModel");
 const Applicant_history = require("../model/applicant_historyModel");
 const RecentGrades = require('../model/recent_grades');
 const Settings = require('../model/settingsModel');
+const settingsController = require('./settingsController');
 
 
 const studentController = {
@@ -109,32 +110,44 @@ const studentController = {
             return studentController.errorMessage(res, 400, { message: "Please fill up all fields", success: false });
         }
 
-        Students.getStudentByUsername(username, (err, getResult) => {
-            if (err) return studentController.errorMessage(res, 500, { message: "Database Error", success: false })
+        // Check maintenance mode first
+        settingsController.checkMaintenanceMode((err, isMaintenanceMode) => {
+            if (err) {
+                console.error('Error checking maintenance mode:', err);
+                // Continue with login if we can't check maintenance mode
+            }
             
-            if (getResult.length === 0) {
-                return studentController.errorMessage(res, 401, { message: "User not found", success: false })
+            if (isMaintenanceMode) {
+                return studentController.errorMessage(res, 503, { message: "System is under maintenance. Please try again later.", success: false });
             }
 
-            const student = getResult[0];
+            Students.getStudentByUsername(username, (err, getResult) => {
+                if (err) return studentController.errorMessage(res, 500, { message: "Database Error", success: false })
+                
+                if (getResult.length === 0) {
+                    return studentController.errorMessage(res, 401, { message: "User not found", success: false })
+                }
 
-            const verifyPassword = bcrypt.compareSync(password, student.password);
+                const student = getResult[0];
 
-            if (!verifyPassword) {
-                return studentController.errorMessage(res, 401, { message: "Incorrect password", success: false })
-            }
+                const verifyPassword = bcrypt.compareSync(password, student.password);
 
-            const token = jwt.sign({ username, id: student.id }, process.env.STUDENT_LOGIN_SECRET_KEY, { expiresIn: "1h" });
+                if (!verifyPassword) {
+                    return studentController.errorMessage(res, 401, { message: "Incorrect password", success: false })
+                }
 
-            res.cookie("studentLogin", token, {
-                sameSite: "lax",
-                httpOnly: true,
-                secure:false
-            });
+                const token = jwt.sign({ username, id: student.id }, process.env.STUDENT_LOGIN_SECRET_KEY, { expiresIn: "1h" });
 
-            // return token in response body as well (useful for AJAX requests when cookies aren't sent)
-            return studentController.successMessage(res, 201, { message: "Login successfull", success: true, token });
-        })  
+                res.cookie("studentLogin", token, {
+                    sameSite: "lax",
+                    httpOnly: true,
+                    secure:false
+                });
+
+                // return token in response body as well (useful for AJAX requests when cookies aren't sent)
+                return studentController.successMessage(res, 201, { message: "Login successfull", success: true, token });
+            })
+        });
     },
 
     getAll: (req, res) => {

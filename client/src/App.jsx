@@ -1,27 +1,28 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { HashRouter as Router, Routes, Route } from "react-router-dom";
 
-import ApplicantRegister from './components/applicants/ApplicantRegister'
-import AdminLogin from "./components/admin/AdminLogin";
-import StudentLogin from "./components/students/StudentLogin";
-import StudentDashboard from "./components/students/StudentDashboard";
-import AdminDashboard from "./components/admin/AdminDashboard";
-import Students from "./components/admin/Students";
-import ManageAdmin from "./components/admin/ManageAdmin";
-import Applications from "./components/admin/Applications";
-import ScholarshipApplications from "./components/admin/ScholarshipApplications";
-import Scholarships from "./components/admin/Scholarships";
-import Reports from "./components/admin/Reports";
-import Settings from "./components/admin/Settings";
+// Pages
+import ApplicantRegister from './pages/applicants/ApplicantRegister'
+import AdminLogin from "./pages/admin/AdminLogin";
+import StudentLogin from "./pages/students/StudentLogin";
+import StudentDashboard from "./pages/students/StudentDashboard";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import Students from "./pages/admin/Students";
+import ManageAdmin from "./pages/admin/ManageAdmin";
+import Applications from "./pages/admin/Applications";
+import ScholarshipApplications from "./pages/admin/ScholarshipApplications";
+import Scholarships from "./pages/admin/Scholarships";
+import Reports from "./pages/admin/Reports";
+import Settings from "./pages/admin/Settings";
+import { LandingPages } from "./pages/LandingPages";
 
-// Protec routes
+// Components
 import ProtectedRoutes from "./components/private/protectRoutes"
-import { LandingPages } from "./components/shared/LandingPages";
 
 function App() {
 
   return (
     <>
-      <BrowserRouter>
+      <Router>
         <Routes>
           {/* Public Routes */}
           <Route path='/login' element={<AdminLogin/>} />
@@ -43,7 +44,7 @@ function App() {
           <Route path='/admin/reports' element={<ProtectedRoutes url={'admin'} elements={<Reports/>}/>} />
           <Route path='/admin/settings' element={<ProtectedRoutes  url={'admin'} elements={<Settings/>}/>} />
         </Routes>
-      </BrowserRouter>
+      </Router>
     </>
   )
 }

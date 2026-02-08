@@ -1,10 +1,23 @@
 const Appicant_history = require('../model/applicant_historyModel');
 const applicants = require('../model/applicantsModel');
+const settingsController = require('./settingsController');
 
 const applicantsController = {
   // Create a new student
   createApplicant: (req, res) => {
-        const { studentName, email, subjects } = req.body;
+        // Check maintenance mode first
+        settingsController.checkMaintenanceMode((err, isMaintenanceMode) => {
+            if (err) {
+                console.error('Error checking maintenance mode:', err);
+            }
+            if (isMaintenanceMode) {
+                return res.status(503).json({
+                    success: false,
+                    message: 'System is under maintenance. Registration is temporarily disabled.'
+                });
+            }
+
+            const { studentName, email, subjects } = req.body;
 
         // Validation
         if (!studentName || !email || !subjects) {
@@ -64,6 +77,7 @@ const applicantsController = {
                 });
             });
         });
+        }); // end maintenance mode check
     },
 
 };

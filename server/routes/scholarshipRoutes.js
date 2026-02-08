@@ -16,12 +16,14 @@ scholarshipRoutes.get('/list', ScholarshipController.getAll);
 scholarshipRoutes.post('/create', authenticateAdmin, ScholarshipController.create);
 // Admin: manage scholarship applications
 scholarshipRoutes.get('/applications', authenticateAdmin, ScholarshipApplicationController.listAll);
+scholarshipRoutes.get('/applications/history', authenticateAdmin, ScholarshipApplicationController.listHistory);
 scholarshipRoutes.get('/applications/:id', authenticateAdmin, ScholarshipApplicationController.getById);
 scholarshipRoutes.put('/applications/:id/status', authenticateAdmin, ScholarshipApplicationController.updateStatus);
 scholarshipRoutes.get('/applications/:id/document/:index', authenticateAdmin, ScholarshipApplicationController.downloadDocument);
 
 // Student: view their applications
 scholarshipRoutes.get('/my-applications', authenticateStudent, ScholarshipApplicationController.listByStudent);
+scholarshipRoutes.get('/my-applications/history', authenticateStudent, ScholarshipApplicationController.listHistoryByStudent);
 
 // Scholarship CRUD
 scholarshipRoutes.get('/:id', authenticateAdmin, ScholarshipController.getById);

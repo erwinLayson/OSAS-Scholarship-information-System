@@ -2,11 +2,11 @@ import { useState } from 'react';
 import { useNavigate, NavLink } from 'react-router-dom';
 import API from '../../API/fetchAPI';
 import { useToast } from '../../hooks/useToast';
-import Toast from '../shared/Toast';
-import { Card, Button, Input } from '../shared/ui';
-import { LockIcon, UserIcon, EyeIcon, EyeOffIcon } from '../shared/Icons';
+import Toast from '../../components/shared/Toast';
+import { Card, Button, Input } from '../../components/shared/ui';
+import { LockIcon, UserIcon, EyeIcon, EyeOffIcon } from '../../components/shared/Icons';
 import sksuLogo from '../../assets/sksu.png';
-import { Navbar } from '../shared/components';
+import { Navbar } from '../../components/shared/components';
 
 const AdminLogin = () => {
   const navigate = useNavigate();

@@ -1,12 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import API from "../../API/fetchAPI";
 import { useToast } from '../../hooks/useToast';
-import Toast from '../shared/Toast';
+import Toast from '../../components/shared/Toast';
 import { NavLink } from 'react-router-dom';
-import { Card, Button, Input } from '../shared/ui';
-import { UserIcon, MailIcon, BookIcon, PlusIcon, CloseIcon } from '../shared/Icons';
+import { Card, Button, Input } from '../../components/shared/ui';
+import { UserIcon, MailIcon, BookIcon, PlusIcon, CloseIcon } from '../../components/shared/Icons';
 import sksuLogo from '../../assets/sksu.png';
-import {Navbar} from "../shared/components"
+import {Navbar} from "../../components/shared/components"
 
 const ApplicantRegister = () => {
   const { toasts, showToast, hideToast } = useToast();
@@ -20,6 +20,22 @@ const ApplicantRegister = () => {
   const [unitInput, setUnitInput] = useState('');
   const [subjectList, setSubjectList] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [maintenanceMode, setMaintenanceMode] = useState(false);
+
+  // Check maintenance mode on mount
+  useEffect(() => {
+    const checkMaintenance = async () => {
+      try {
+        const res = await API.get('/settings/maintenance_mode');
+        if (res.data && res.data.success) {
+          setMaintenanceMode(res.data.value);
+        }
+      } catch (err) {
+        console.error('Failed to check maintenance mode:', err);
+      }
+    };
+    checkMaintenance();
+  }, []);
 
   const handleGradeInputChange = (e) => {
     const val = e.target.value;
@@ -123,6 +139,21 @@ const ApplicantRegister = () => {
 
           {/* Registration Card */}
           <Card className="shadow-xl">
+            {maintenanceMode && (
+              <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <div className="flex-shrink-0">
+                    <svg className="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="text-amber-800 font-semibold">System Under Maintenance</h3>
+                    <p className="text-amber-700 text-sm">Registration is temporarily disabled. Please try again later.</p>
+                  </div>
+                </div>
+              </div>
+            )}
             <form onSubmit={handleSubmit} className="space-y-5">
               {/* Logo above card */}
               <div className="text-center mb-8">
@@ -143,7 +174,7 @@ const ApplicantRegister = () => {
                 value={formData.studentName}
                 onChange={handleChange}
                 required
-                disabled={loading}
+                disabled={loading || maintenanceMode}
               />
 
               {/* Email Address */}
@@ -157,7 +188,7 @@ const ApplicantRegister = () => {
                 onChange={handleChange}
                 hint="Only SKSU email addresses are allowed"
                 required
-                disabled={loading}
+                disabled={loading || maintenanceMode}
               />
 
               {/* Subjects */}
@@ -177,7 +208,7 @@ const ApplicantRegister = () => {
                       onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddSubject())}
                       className="w-full pl-11 pr-4 py-3 bg-white text-gray-900 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-500 transition-all placeholder:text-gray-400"
                       placeholder="Subject name"
-                      disabled={loading}
+                      disabled={loading || maintenanceMode}
                     />
                   </div>
                   <div className="flex gap-2">
@@ -189,7 +220,7 @@ const ApplicantRegister = () => {
                       onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddSubject())}
                       className="w-24 px-4 py-3 bg-white text-gray-900 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-500 transition-all placeholder:text-gray-400"
                       placeholder="Grade"
-                      disabled={loading}
+                      disabled={loading || maintenanceMode}
                     />
                     <input
                       type="text"
@@ -198,7 +229,7 @@ const ApplicantRegister = () => {
                       onKeyPress={e => e.key === 'Enter' && (e.preventDefault(), handleAddSubject())}
                       className="w-20 px-4 py-3 bg-white text-gray-900 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-500 transition-all placeholder:text-gray-400"
                       placeholder="Units"
-                      disabled={loading}
+                      disabled={loading || maintenanceMode}
                     />
                   </div>
                   <Button
@@ -206,7 +237,7 @@ const ApplicantRegister = () => {
                     variant="primary"
                     onClick={handleAddSubject}
                     icon={<PlusIcon size="1rem" />}
-                    disabled={loading}
+                    disabled={loading || maintenanceMode}
                   >
                     Add
                   </Button>
@@ -230,7 +261,7 @@ const ApplicantRegister = () => {
                             type="button"
                             onClick={() => handleRemoveSubject(index)}
                             className="text-emerald-600 hover:text-red-500 transition-colors ml-1"
-                            disabled={loading}
+                            disabled={loading || maintenanceMode}
                           >
                             <CloseIcon size="1rem" />
                           </button>
@@ -248,7 +279,7 @@ const ApplicantRegister = () => {
                   id="terms"
                   className="w-4 h-4 mt-1 text-emerald-600 bg-white border-gray-300 rounded focus:ring-emerald-500 cursor-pointer"
                   required
-                  disabled={loading}
+                  disabled={loading || maintenanceMode}
                 />
                 <label htmlFor="terms" className="ml-3 text-sm text-gray-600">
                   I agree to the{' '}
@@ -268,9 +299,10 @@ const ApplicantRegister = () => {
                 variant="primary"
                 fullWidth
                 loading={loading}
+                disabled={maintenanceMode}
                 className="!py-3"
               >
-                Register
+                {maintenanceMode ? 'Registration Disabled' : 'Register'}
               </Button>
             </form>
 

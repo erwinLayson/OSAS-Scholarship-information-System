@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import AdminLayout from './shareFIles/AdminLayout';
+import AdminLayout from '../../components/admin/shareFIles/AdminLayout';
 import API from '../../API/fetchAPI';
-import { StatCard, Card, Badge, Button } from '../shared/ui';
-import { PeopleIcon, MoneyIcon, ClipboardIcon, SuccessIcon, ChartIcon, HourglassIcon, SearchIcon, DownloadIcon, TrashIcon, FileTextIcon } from '../shared/Icons';
+import { StatCard, Card, Badge, Button } from '../../components/shared/ui';
+import { PeopleIcon, MoneyIcon, ClipboardIcon, SuccessIcon, ChartIcon, HourglassIcon, SearchIcon, DownloadIcon, TrashIcon, FileTextIcon } from '../../components/shared/Icons';
 
 const Reports = () => {
   const [reportType, setReportType] = useState('students');

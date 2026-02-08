@@ -1,10 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import AdminLayout from './shareFIles/AdminLayout';
+import AdminLayout from '../../components/admin/shareFIles/AdminLayout';
 import API from '../../API/fetchAPI';
-import ActivityChart from './ActivityChart';
-import { StatCard, Card, Badge, Button } from '../shared/ui';
-import { PeopleIcon, ClipboardIcon, SuccessIcon, ChartIcon, PlusIcon, EyeIcon, FileTextIcon } from '../shared/Icons';
+import ActivityChart from '../../components/admin/ActivityChart';
+import { StatCard, Card, Badge, Button } from '../../components/shared/ui';
+import { PeopleIcon, ClipboardIcon, SuccessIcon, ChartIcon, PlusIcon, EyeIcon, FileTextIcon } from '../../components/shared/Icons';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();

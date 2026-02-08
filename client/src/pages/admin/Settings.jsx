@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import AdminLayout from './shareFIles/AdminLayout';
+import AdminLayout from '../../components/admin/shareFIles/AdminLayout';
 import API from '../../API/fetchAPI';
 import { useToast } from '../../hooks/useToast';
-import Toast from '../shared/Toast';
-import { Card, Button } from '../shared/ui';
-import { UserIcon, InfoIcon, LockIcon, BellIcon } from '../shared/Icons';
+import Toast from '../../components/shared/Toast';
+import { Card, Button, Modal } from '../../components/shared/ui';
+import { UserIcon, InfoIcon, LockIcon, BellIcon } from '../../components/shared/Icons';
 
 const Settings = () => {
     const { toasts, showToast, hideToast } = useToast();
@@ -25,10 +25,13 @@ const Settings = () => {
         siteName: 'OSAS System',
         siteDescription: 'Online Scholarship Application System',
         emailNotifications: true,
-        smsNotifications: false,
         maintenanceMode: false,
-        autoApproval: false,
     });
+
+    // Grade edit settings
+    const [allowGradeEdit, setAllowGradeEdit] = useState(false);
+    const [showSemesterPicker, setShowSemesterPicker] = useState(false);
+    const [semesterInput, setSemesterInput] = useState('');
 
     const tabs = [
       { id: 'profile', name: 'Profile Settings', icon: <UserIcon size="1.25rem" /> },
@@ -61,6 +64,33 @@ const Settings = () => {
                 }
             } catch (err) {
                 console.log(err);
+            }
+        })();
+
+        // Fetch grade edit setting
+        (async () => {
+            try {
+                const res = await API.get('/settings/allow_grade_edit');
+                if (res.data && res.data.success) {
+                    setAllowGradeEdit(!!res.data.value);
+                }
+            } catch (e) {
+                try {
+                    const val = localStorage.getItem('allow_grade_edit') === 'true';
+                    setAllowGradeEdit(val);
+                } catch (e2) {}
+            }
+        })();
+
+        // Fetch maintenance mode setting
+        (async () => {
+            try {
+                const res = await API.get('/settings/maintenance_mode');
+                if (res.data && res.data.success) {
+                    setSystemSettings(prev => ({ ...prev, maintenanceMode: !!res.data.value }));
+                }
+            } catch (e) {
+                console.error('Failed to fetch maintenance mode', e);
             }
         })();
     }, [])
@@ -98,6 +128,74 @@ const Settings = () => {
             showToast("An error occurred while updating password", "error");
         }
     }
+
+    const handleGradeEditToggle = async (checked) => {
+        if (checked) {
+            // When enabling, show semester picker first
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = now.getMonth() + 1;
+            const sem = month >= 7 ? 'S2' : 'S1';
+            setSemesterInput(`${year}-${sem}`);
+            setShowSemesterPicker(true);
+        } else {
+            // When disabling, directly update
+            try {
+                const res = await API.put('/settings/allow_grade_edit', { value: false });
+                if (res.data && res.data.success) {
+                    setAllowGradeEdit(false);
+                    try { localStorage.setItem('allow_grade_edit', 'false'); } catch (e) {}
+                    showToast('Students can no longer update semester grades', 'warning');
+                } else {
+                    showToast(res.data?.message || 'Failed to update setting', 'error');
+                }
+            } catch (err) {
+                console.error('Failed to update setting', err);
+                showToast('Failed to update setting', 'error');
+            }
+        }
+    };
+
+    const handleEnableSemester = async () => {
+        const sem = String(semesterInput || '').trim();
+        if (!/^[0-9]{4}-S[12]$/.test(sem)) {
+            showToast('Invalid semester. Use format YYYY-S1 or YYYY-S2', 'error');
+            return;
+        }
+        try {
+            const res = await API.put('/settings/allow_grade_edit', { value: true, semester: sem });
+            if (res.data && res.data.success) {
+                setAllowGradeEdit(true);
+                try { localStorage.setItem('allow_grade_edit', 'true'); } catch (e) {}
+                showToast('Students can now update semester grades', 'success');
+                setShowSemesterPicker(false);
+            } else {
+                showToast(res.data?.message || 'Failed to update setting', 'error');
+            }
+        } catch (err) {
+            console.error('Failed to update setting', err);
+            showToast('Failed to update setting', 'error');
+        }
+    };
+
+    const handleMaintenanceModeToggle = async (checked) => {
+        try {
+            const res = await API.put('/settings/maintenance_mode', { value: checked });
+            if (res.data && res.data.success) {
+                setSystemSettings(prev => ({ ...prev, maintenanceMode: checked }));
+                if (checked) {
+                    showToast('Maintenance mode enabled. Students cannot login.', 'warning');
+                } else {
+                    showToast('Maintenance mode disabled. Students can login.', 'success');
+                }
+            } else {
+                showToast(res.data?.message || 'Failed to update maintenance mode', 'error');
+            }
+        } catch (err) {
+            console.error('Failed to update maintenance mode', err);
+            showToast('Failed to update maintenance mode', 'error');
+        }
+    };
 
   return (
     <AdminLayout activeMenu="settings" title="Settings" subtitle="Manage system and account settings">
@@ -224,32 +322,16 @@ const Settings = () => {
                   </label>
                 </div>
 
-                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-200 hover:border-gray-300 transition-all">
-                  <div>
-                    <p className="font-semibold text-gray-800">SMS Notifications</p>
-                    <p className="text-sm text-gray-500">Send SMS notifications to users</p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={systemSettings.smsNotifications}
-                      onChange={(e) => setSystemSettings({...systemSettings, smsNotifications: e.target.checked})}
-                      className="sr-only peer"
-                    />
-                    <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all after:shadow-sm peer-checked:bg-emerald-600"></div>
-                  </label>
-                </div>
-
                 <div className="flex items-center justify-between p-4 bg-amber-50 rounded-xl border border-amber-200 hover:border-amber-300 transition-all">
                   <div>
                     <p className="font-semibold text-gray-800">Maintenance Mode</p>
-                    <p className="text-sm text-gray-500">Temporarily disable site access</p>
+                    <p className="text-sm text-gray-500">Temporarily disable student login and registration (admin can still login)</p>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input
                       type="checkbox"
                       checked={systemSettings.maintenanceMode}
-                      onChange={(e) => setSystemSettings({...systemSettings, maintenanceMode: e.target.checked})}
+                      onChange={(e) => handleMaintenanceModeToggle(e.target.checked)}
                       className="sr-only peer"
                     />
                     <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-amber-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all after:shadow-sm peer-checked:bg-amber-500"></div>
@@ -258,14 +340,14 @@ const Settings = () => {
 
                 <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-200 hover:border-gray-300 transition-all">
                   <div>
-                    <p className="font-semibold text-gray-800">Auto Approval</p>
-                    <p className="text-sm text-gray-500">Automatically approve qualifying applications</p>
+                    <p className="font-semibold text-gray-800">Enable Student Edit Grade</p>
+                    <p className="text-sm text-gray-500">Allow students to update their semester grades</p>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input
                       type="checkbox"
-                      checked={systemSettings.autoApproval}
-                      onChange={(e) => setSystemSettings({...systemSettings, autoApproval: e.target.checked})}
+                      checked={allowGradeEdit}
+                      onChange={(e) => handleGradeEditToggle(e.target.checked)}
                       className="sr-only peer"
                     />
                     <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all after:shadow-sm peer-checked:bg-emerald-600"></div>
@@ -429,6 +511,57 @@ const Settings = () => {
           </Card>
         )}
       </div>
+
+      {/* Semester Picker Modal */}
+      <Modal
+        isOpen={showSemesterPicker}
+        onClose={() => setShowSemesterPicker(false)}
+        title="Select Semester to Enable"
+        size="sm"
+      >
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Year</label>
+              <input
+                type="number"
+                min="2000"
+                max="2100"
+                value={semesterInput.split('-')[0] || ''}
+                onChange={(e) => {
+                  const yr = String(e.target.value || '').slice(0,4);
+                  const part = semesterInput.split('-')[1] || 'S1';
+                  setSemesterInput(`${yr}-${part}`);
+                }}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                placeholder="e.g. 2025"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Semester</label>
+              <select 
+                value={semesterInput.split('-')[1] || 'S1'} 
+                onChange={(e) => {
+                  const yr = semesterInput.split('-')[0] || new Date().getFullYear();
+                  setSemesterInput(`${yr}-${e.target.value}`);
+                }} 
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              >
+                <option value="S1">S1 (1st Sem)</option>
+                <option value="S2">S2 (2nd Sem)</option>
+              </select>
+            </div>
+          </div>
+          <div className="flex justify-end gap-3 pt-4">
+            <Button variant="secondary" onClick={() => setShowSemesterPicker(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleEnableSemester}>
+              Enable
+            </Button>
+          </div>
+        </div>
+      </Modal>
       
       {/* Toast Notifications */}
       {toasts.map(toast => (

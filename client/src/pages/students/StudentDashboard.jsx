@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API from '../../API/fetchAPI';
 import { useToast } from '../../hooks/useToast';
-import Toast from '../shared/Toast';
-import { StatCard, Badge, Button, Card, Modal } from '../shared/ui';
+import Toast from '../../components/shared/Toast';
+import { StatCard, Badge, Button, Card, Modal } from '../../components/shared/ui';
 import { 
   BookIcon, 
   ChartIcon, 
@@ -24,7 +24,7 @@ import {
   ChevronDownIcon,
   ChevronUpIcon,
   GraduationCapIcon
-} from '../shared/Icons';
+} from '../../components/shared/Icons';
 
 const StudentDashboard = () => {
   const navigate = useNavigate();
@@ -47,6 +47,12 @@ const StudentDashboard = () => {
   const [currentEditSessionId, setCurrentEditSessionId] = useState('');
   const [currentEditSemester, setCurrentEditSemester] = useState('');
   const [studentApplications, setStudentApplications] = useState([]);
+  const [applicationHistory, setApplicationHistory] = useState([]);
+  const [applicationsTab, setApplicationsTab] = useState('pending'); // 'pending' or 'history'
+  const [historyStatusFilter, setHistoryStatusFilter] = useState('All');
+  const [historyScholarshipFilter, setHistoryScholarshipFilter] = useState('All');
+  const [historyDateFrom, setHistoryDateFrom] = useState('');
+  const [historyDateTo, setHistoryDateTo] = useState('');
   const [appDetailsModalVisible, setAppDetailsModalVisible] = useState(false);
   const [selectedApplicationDetail, setSelectedApplicationDetail] = useState(null);
   const [expandedHistoryId, setExpandedHistoryId] = useState(null);
@@ -55,6 +61,7 @@ const StudentDashboard = () => {
     fetchScholarships();
     fetchStudentProfile();
     fetchStudentApplications();
+    fetchApplicationHistory();
     // fetch server-side setting for grade editing (includes session id and semester)
     (async () => {
       try {
@@ -124,6 +131,17 @@ const StudentDashboard = () => {
       }
     } catch (err) {
       console.error('Error fetching student applications', err);
+    }
+  };
+
+  const fetchApplicationHistory = async () => {
+    try {
+      const res = await API.get('/scholarships/my-applications/history');
+      if (res.data && res.data.success) {
+        setApplicationHistory(res.data.data || []);
+      }
+    } catch (err) {
+      console.error('Error fetching application history', err);
     }
   };
 
@@ -240,7 +258,7 @@ const StudentDashboard = () => {
   const average = calculateAverage();
   const gradeStatus = getGradeStatus();
 
-  // derived grade info for recent display (use editing buffer when editing)
+  // derived grade info for display (use editing buffer when editing)
   const currentList = (allowGradeEdit && !hasUpdatedThisSemester) ? (Array.isArray(editingGrades) ? editingGrades : []) : subjects;
   const totalUnits = currentList.reduce((sum, s) => sum + (Number(s.unit) || 0), 0);
   const recentGrades = currentList.length > 0 ? currentList.slice(-5).slice().reverse() : [];
@@ -558,58 +576,266 @@ const StudentDashboard = () => {
 
   const renderApplicationsView = () => (
     <div className="space-y-6 animate-fadeIn">
-      <Card 
-        title="My Applications"
-        subtitle={`${studentApplications.length} total applications`}
-      >
-        {studentApplications.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <FileTextIcon className="text-gray-400" size="2rem" />
-            </div>
-            <p className="text-gray-500">You haven't applied to any scholarships yet</p>
-            <Button 
-              variant="primary" 
-              className="mt-4"
-              onClick={() => setActiveView('scholarships')}
-            >
-              Browse Scholarships
-            </Button>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {studentApplications.map(app => (
-              <div 
-                key={app.id} 
-                className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center">
-                    <FileTextIcon className="text-emerald-600" size="1.5rem" />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-gray-800">{app.scholarship_name || `Scholarship #${app.scholarship_id}`}</p>
-                    <p className="text-sm text-gray-500">Applied on {new Date(app.created_at).toLocaleDateString()}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Badge variant={app.status === 'Approved' ? 'success' : app.status === 'Rejected' ? 'error' : 'warning'}>
-                    {app.status}
-                  </Badge>
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    icon={<EyeIcon size="1rem" />}
-                    onClick={() => { setSelectedApplicationDetail(app); setAppDetailsModalVisible(true); }}
-                  >
-                    View
-                  </Button>
-                </div>
+      {/* Tabs */}
+      <div className="flex border-b border-gray-200">
+        <button
+          onClick={() => setApplicationsTab('pending')}
+          className={`px-6 py-3 font-semibold text-sm border-b-2 transition-colors ${
+            applicationsTab === 'pending'
+              ? 'border-emerald-600 text-emerald-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          Pending Applications ({studentApplications.length})
+        </button>
+        <button
+          onClick={() => setApplicationsTab('history')}
+          className={`px-6 py-3 font-semibold text-sm border-b-2 transition-colors ${
+            applicationsTab === 'history'
+              ? 'border-emerald-600 text-emerald-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          Application History ({applicationHistory.length})
+        </button>
+      </div>
+
+      {/* Pending Applications Tab */}
+      {applicationsTab === 'pending' && (
+        <Card 
+          title="Pending Applications"
+          subtitle={`${studentApplications.length} pending applications`}
+        >
+          {studentApplications.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <FileTextIcon className="text-gray-400" size="2rem" />
               </div>
-            ))}
+              <p className="text-gray-500">You don't have any pending applications</p>
+              <Button 
+                variant="primary" 
+                className="mt-4"
+                onClick={() => setActiveView('scholarships')}
+              >
+                Browse Scholarships
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {studentApplications.map(app => (
+                <div 
+                  key={app.id} 
+                  className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center">
+                      <HourglassIcon className="text-yellow-600" size="1.5rem" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-800">{app.scholarship_name || `Scholarship #${app.scholarship_id}`}</p>
+                      <p className="text-sm text-gray-500">Applied on {new Date(app.created_at).toLocaleDateString()}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Badge variant="warning">
+                      {app.status}
+                    </Badge>
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      icon={<EyeIcon size="1rem" />}
+                      onClick={() => { setSelectedApplicationDetail(app); setAppDetailsModalVisible(true); }}
+                    >
+                      View
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+      )}
+
+      {/* Application History Tab */}
+      {applicationsTab === 'history' && (
+        <>
+          {/* History Filters */}
+          <div className="bg-white rounded-xl shadow border border-gray-200 p-4">
+            <div className="flex flex-wrap items-end gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                <select
+                  value={historyStatusFilter}
+                  onChange={e => setHistoryStatusFilter(e.target.value)}
+                  className="px-3 py-2 rounded border border-gray-300 bg-white text-gray-800 min-w-[120px]"
+                >
+                  <option value="All">All</option>
+                  <option value="Approved">Approved</option>
+                  <option value="Rejected">Rejected</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Scholarship</label>
+                <select
+                  value={historyScholarshipFilter}
+                  onChange={e => setHistoryScholarshipFilter(e.target.value)}
+                  className="px-3 py-2 rounded border border-gray-300 bg-white text-gray-800 min-w-[180px]"
+                >
+                  <option value="All">All Scholarships</option>
+                  {[...new Set(applicationHistory.map(app => app.scholarship_name).filter(Boolean))].map(name => (
+                    <option key={name} value={name}>{name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">From Date</label>
+                <input
+                  type="date"
+                  value={historyDateFrom}
+                  onChange={e => setHistoryDateFrom(e.target.value)}
+                  className="px-3 py-2 rounded border border-gray-300 bg-white text-gray-800"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">To Date</label>
+                <input
+                  type="date"
+                  value={historyDateTo}
+                  onChange={e => setHistoryDateTo(e.target.value)}
+                  className="px-3 py-2 rounded border border-gray-300 bg-white text-gray-800"
+                />
+              </div>
+              <button
+                onClick={() => {
+                  setHistoryStatusFilter('All');
+                  setHistoryScholarshipFilter('All');
+                  setHistoryDateFrom('');
+                  setHistoryDateTo('');
+                }}
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors"
+              >
+                Clear Filters
+              </button>
+            </div>
+            <div className="mt-2 text-sm text-gray-500">
+              Showing {applicationHistory.filter(app => {
+                if (historyStatusFilter !== 'All' && app.status !== historyStatusFilter) return false;
+                if (historyScholarshipFilter !== 'All' && app.scholarship_name !== historyScholarshipFilter) return false;
+                if (historyDateFrom) {
+                  const appDate = new Date(app.processed_at);
+                  const fromDate = new Date(historyDateFrom);
+                  if (appDate < fromDate) return false;
+                }
+                if (historyDateTo) {
+                  const appDate = new Date(app.processed_at);
+                  const toDate = new Date(historyDateTo);
+                  toDate.setHours(23, 59, 59, 999);
+                  if (appDate > toDate) return false;
+                }
+                return true;
+              }).length} of {applicationHistory.length} records
+            </div>
           </div>
-        )}
-      </Card>
+
+          <Card 
+            title="Application History"
+            subtitle={`${applicationHistory.length} processed applications`}
+          >
+            {applicationHistory.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <ClipboardIcon className="text-gray-400" size="2rem" />
+                </div>
+                <p className="text-gray-500">No application history yet</p>
+                <p className="text-sm text-gray-400 mt-2">Your approved or rejected applications will appear here</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {applicationHistory.filter(app => {
+                  if (historyStatusFilter !== 'All' && app.status !== historyStatusFilter) return false;
+                  if (historyScholarshipFilter !== 'All' && app.scholarship_name !== historyScholarshipFilter) return false;
+                  if (historyDateFrom) {
+                    const appDate = new Date(app.processed_at);
+                    const fromDate = new Date(historyDateFrom);
+                    if (appDate < fromDate) return false;
+                  }
+                  if (historyDateTo) {
+                    const appDate = new Date(app.processed_at);
+                    const toDate = new Date(historyDateTo);
+                    toDate.setHours(23, 59, 59, 999);
+                    if (appDate > toDate) return false;
+                  }
+                  return true;
+                }).length === 0 ? (
+                  <div className="text-center py-8">
+                    <p className="text-gray-500">No applications match your filters</p>
+                    <button
+                      onClick={() => {
+                        setHistoryStatusFilter('All');
+                        setHistoryScholarshipFilter('All');
+                        setHistoryDateFrom('');
+                        setHistoryDateTo('');
+                      }}
+                      className="mt-2 text-emerald-600 hover:text-emerald-700 font-medium"
+                    >
+                      Clear filters
+                    </button>
+                  </div>
+                ) : applicationHistory.filter(app => {
+                  if (historyStatusFilter !== 'All' && app.status !== historyStatusFilter) return false;
+                  if (historyScholarshipFilter !== 'All' && app.scholarship_name !== historyScholarshipFilter) return false;
+                  if (historyDateFrom) {
+                    const appDate = new Date(app.processed_at);
+                    const fromDate = new Date(historyDateFrom);
+                    if (appDate < fromDate) return false;
+                  }
+                  if (historyDateTo) {
+                    const appDate = new Date(app.processed_at);
+                    const toDate = new Date(historyDateTo);
+                    toDate.setHours(23, 59, 59, 999);
+                    if (appDate > toDate) return false;
+                  }
+                  return true;
+                }).map(app => (
+                  <div 
+                    key={app.id} 
+                    className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                        app.status === 'Approved' ? 'bg-green-100' : 'bg-red-100'
+                      }`}>
+                        {app.status === 'Approved' ? (
+                          <SuccessIcon className="text-green-600" size="1.5rem" />
+                        ) : (
+                          <CloseIcon className="text-red-600" size="1.5rem" />
+                        )}
+                      </div>
+                      <div>
+                        <p className="font-semibold text-gray-800">{app.scholarship_name || `Scholarship #${app.scholarship_id}`}</p>
+                        <div className="flex gap-4 text-sm text-gray-500">
+                          <span>Applied: {app.created_at ? new Date(app.created_at).toLocaleDateString() : '—'}</span>
+                          <span>Processed: {app.processed_at ? new Date(app.processed_at).toLocaleDateString() : '—'}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Badge variant={app.status === 'Approved' ? 'success' : 'error'}>
+                        {app.status}
+                      </Badge>
+                      {app.scholarship_amount && (
+                        <span className="text-sm font-medium text-gray-600">
+                          ₱{Number(app.scholarship_amount).toLocaleString()}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+        </>
+      )}
 
       {/* Application Details Modal */}
       <Modal

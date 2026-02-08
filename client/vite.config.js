@@ -4,7 +4,7 @@ import tailwindcss from '@tailwindcss/vite'
 
 // https://vite.dev/config/
 export default defineConfig({
-  // base: "/Scholarship-Application-and-Management-System/",
+  base: "/Scholarship-Application-and-Management-System/",
   plugins: [
     tailwindcss(),
     react()

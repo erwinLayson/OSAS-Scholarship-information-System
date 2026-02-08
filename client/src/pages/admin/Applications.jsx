@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import AdminLayout from './shareFIles/AdminLayout';
+import AdminLayout from '../../components/admin/shareFIles/AdminLayout';
 import API from '../../API/fetchAPI';
 import { useToast } from '../../hooks/useToast';
-import Toast from '../shared/Toast';
-import { StatCard, Card, Badge, Button, Modal } from '../shared/ui';
-import { ClipboardIcon, HourglassIcon, SuccessIcon, BookIcon, SearchIcon, EyeIcon, CheckCircleIcon, CloseIcon as XCircleIcon } from '../shared/Icons';
+import Toast from '../../components/shared/Toast';
+import { StatCard, Card, Badge, Button, Modal } from '../../components/shared/ui';
+import { ClipboardIcon, HourglassIcon, SuccessIcon, BookIcon, SearchIcon, EyeIcon, CheckCircleIcon, CloseIcon as XCircleIcon } from '../../components/shared/Icons';
 
 const Applications = () => {
     const [applications, setApplications] = useState([]);

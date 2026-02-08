@@ -110,19 +110,24 @@ class ScholarshipApplicationController {
     const { status } = req.body;
     if (!status) return res.status(400).json({ message: 'Status required', success: false });
 
+    // Only move to history if approved or rejected
+    if (status !== 'Approved' && status !== 'Rejected') {
+      return res.status(400).json({ message: 'Status must be Approved or Rejected', success: false });
+    }
+
     const { reduceAvailableSlots } = require('../model/scholarshipSlotUtils');
 
     ScholarshipApplication.getById(id, (err, rows) => {
       if (err) return res.status(500).json({ message: 'Internal server error', success: false, error: err });
       if (!rows || rows.length === 0) return res.status(404).json({ message: 'Application not found', success: false });
       const app = rows[0];
-      const prevStatus = app.status;
 
-      ScholarshipApplication.updateStatus(id, status, (uErr) => {
-        if (uErr) return res.status(500).json({ message: 'Failed to update status', success: false, error: uErr });
+      // Move application to history and delete from active table
+      ScholarshipApplication.moveToHistory(id, status, (moveErr) => {
+        if (moveErr) return res.status(500).json({ message: 'Failed to process application', success: false, error: moveErr });
 
-        // If approving and previous status was not approved, reduce available slots
-        if (status === 'Approved' && prevStatus !== 'Approved') {
+        // If approving, reduce available slots
+        if (status === 'Approved') {
           reduceAvailableSlots(app.scholarship_id, 1, (slotErr) => {
             if (slotErr) {
               console.error('Failed to reduce scholarship slots:', slotErr);
@@ -140,25 +145,23 @@ class ScholarshipApplicationController {
             } catch (e) {
               console.warn('Failed to send status email', e && e.message);
             }
-            return res.status(200).json({ message: 'Status updated', success: true });
+            return res.status(200).json({ message: 'Application approved and moved to history', success: true });
           });
         } else {
-          // send notification email to applicant
+          // Rejected - send rejection email
           try {
             const to = app.email || app.email;
             const scholarshipName = app.scholarship_name || 'the scholarship';
-            if (status === 'Rejected') {
-              rejectionMail(
-                to,
-                'Scholarship Application Rejected',
-                'We are sorry to inform you',
-                `Your application for ${scholarshipName} has been rejected.`
-              );
-            }
+            rejectionMail(
+              to,
+              'Scholarship Application Rejected',
+              'We are sorry to inform you',
+              `Your application for ${scholarshipName} has been rejected.`
+            );
           } catch (e) {
             console.warn('Failed to send status email', e && e.message);
           }
-          return res.status(200).json({ message: 'Status updated', success: true });
+          return res.status(200).json({ message: 'Application rejected and moved to history', success: true });
         }
       });
     });
@@ -190,6 +193,37 @@ class ScholarshipApplicationController {
       if (!fs.existsSync(fullPath)) return res.status(404).json({ message: 'File not found on server', success: false });
 
       return res.sendFile(fullPath);
+    });
+  }
+
+  static listHistory(req, res) {
+    ScholarshipApplication.getHistory((err, rows) => {
+      if (err) {
+        console.error('Error fetching application history:', err);
+        return res.status(500).json({ message: 'Internal server error', success: false, error: err });
+      }
+      return res.status(200).json({ message: 'Application history retrieved', success: true, data: rows });
+    });
+  }
+
+  static listHistoryByStudent(req, res) {
+    const student = req.user;
+    if (!student || !student.id) return res.status(401).json({ message: 'Authentication required', success: false });
+
+    ScholarshipApplication.getHistoryByStudent(student.id, (err, rows) => {
+      if (err) {
+        console.error('Error fetching student application history:', err);
+        return res.status(500).json({ message: 'Internal server error', success: false, error: err });
+      }
+
+      // parse documents JSON safely
+      const parsed = (rows || []).map(r => {
+        let docs = r.documents;
+        try { if (typeof docs === 'string') docs = JSON.parse(docs); } catch (e) { docs = docs || []; }
+        return { ...r, documents: docs };
+      });
+
+      return res.status(200).json({ message: 'Student application history retrieved', success: true, data: parsed });
     });
   }
 }
