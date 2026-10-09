@@ -2,7 +2,7 @@ import axios from "axios"
 import { getAuthRole, clearAuthRole } from "../hooks/useAuthRole"
 
 const API = axios.create({
-    baseURL: "http://localhost:3000",
+    baseURL: import.meta.env.VITE_SERVER_URL,
     withCredentials: true
 })
 
