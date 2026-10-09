@@ -109,10 +109,16 @@ export function Footer() {
           {/* Column 3: Resources */}
           <div>
             <h3 className="text-white font-semibold mb-4">Resources</h3>
-            <ul className="space-y-3">
-              {resources.map((link) => (
+            <ul className="space-y-3">              { resources.map((link) => (
                 <li key={link.name}>
-                  {link.to ? (
+                  { link.name === 'Admin Portal' ? (
+                    <NavLink 
+                      to="/login"
+                      className="text-gray-400 hover:text-emerald-400 transition-colors text-sm"
+                    >
+                      Admin Portal
+                    </NavLink>
+                  ) : link.to ? (
                     <NavLink 
                       to={link.to}
                       className="text-gray-400 hover:text-emerald-400 transition-colors text-sm"

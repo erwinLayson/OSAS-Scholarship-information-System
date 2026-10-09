@@ -11,7 +11,9 @@ import {
   GraduationCapIcon,
   AwardIcon,
   FileTextIcon,
-  StarIcon
+  StarIcon,
+  ClipboardIcon,
+  SearchIcon
 } from "../components/shared/Icons";
 
 // Placeholder images from Unsplash
@@ -134,39 +136,59 @@ export function LandingPages() {
       {/* ============================================
           HERO SECTION
           ============================================ */}
-      <section id="home" className="relative overflow-hidden bg-gradient-to-br from-gray-50 to-white">
-        {/* Background decoration */}
-        <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-emerald-50 to-transparent opacity-50" />
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-emerald-100 rounded-full blur-3xl opacity-30" />
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-emerald-100 rounded-full blur-3xl opacity-30" />
-        
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
+      <section id="home" className="relative min-h-[80vh] sm:min-h-[75vh] md:min-h-[70vh] lg:min-h-[65vh] overflow-hidden">
+        {/* Responsive background image */}
+        <img
+          src={HERO_IMAGE}
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover"
+          style={{ objectPosition: 'center 30%' }}
+        />
+        {/* Dark overlay for text readability */}
+        <div className="absolute inset-0 bg-black/45"
+          style={{ backdropFilter: 'blur(2px)' }}
+        />
+        {/* Responsive object-position overrides */}
+        <style>{`
+          @media (max-width: 639px) {
+            #home img { object-position: center 18% !important; }
+          }
+          @media (min-width: 640px) and (max-width: 1023px) {
+            #home img { object-position: center 28% !important; }
+          }
+          @media (min-width: 1024px) {
+            #home img { object-position: center 35% !important; }
+          }
+        `}</style>
+
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-12 md:py-16 lg:py-20">
+          <div className="grid lg:grid-cols-2 gap-12 items-center min-h-[60vh]">
             {/* Left Content */}
             <div 
               ref={heroAnim.ref}
               className={`scroll-animate fade-right ${heroAnim.isVisible ? 'is-visible' : ''}`}
             >
-              <div className="inline-flex items-center gap-2 bg-emerald-100 text-emerald-700 px-4 py-2 rounded-full text-sm font-medium mb-6">
+              <div className="inline-flex items-center gap-2 bg-white/20 text-white px-4 py-2 rounded-full text-sm font-medium mb-6 backdrop-blur-sm">
                 <AwardIcon size="1rem" />
                 Empowering Student Success
               </div>
               
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 leading-tight mb-6">
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight mb-6">
                 Your Gateway to{' '}
-                <span className="text-emerald-600">Scholarship</span>{' '}
+                <span className="text-emerald-200">Scholarship</span>{' '}
                 Opportunities
               </h1>
               
-              <p className="text-lg text-gray-600 mb-8 max-w-lg">
-                OSAS simplifies the scholarship application process for students and 
-                provides administrators with powerful tools to manage and review applications efficiently.
+              <p className="text-lg text-gray-200 mb-8 max-w-lg">
+                OSAS is a scholarship management system that lets students browse, apply, and track 
+                scholarship applications — while giving administrators powerful tools to manage 
+                scholarships, review applications, and monitor student progress.
               </p>
               
               <div className="flex flex-col sm:flex-row gap-4">
                 <NavLink 
                   to="/login"
-                  className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-lg font-semibold hover:bg-emerald-700 transition-all hover:shadow-lg hover:shadow-emerald-200 hover:-translate-y-0.5"
+                  className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-emerald-500 text-white rounded-lg font-semibold hover:bg-emerald-600 transition-all hover:shadow-lg hover:-translate-y-0.5"
                 >
                   Get Started
                   <ArrowRightIcon size="1.25rem" />
@@ -174,66 +196,31 @@ export function LandingPages() {
                 
                 <a 
                   href="#features"
-                  className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-white text-gray-700 rounded-lg font-semibold border border-gray-200 hover:border-emerald-300 hover:text-emerald-600 transition-all"
+                  className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-white/90 text-gray-800 rounded-lg font-semibold border border-white/20 hover:border-emerald-300 hover:text-emerald-300 transition-all backdrop-blur-sm"
                 >
                   Learn More
                 </a>
               </div>
               
               {/* Trust indicators */}
-              <div className="mt-10 pt-8 border-t border-gray-100">
-                <p className="text-sm text-gray-500 mb-3">Trusted by students and institutions</p>
+              <div className="mt-10 pt-8 border-t border-white/20">
+                <p className="text-sm text-gray-300 mb-3">Trusted by students and institutions</p>
                 <div className="flex items-center gap-6">
                   <div className="flex items-center gap-2">
-                    <CheckCircleIcon className="text-emerald-500" size="1.25rem" />
-                    <span className="text-gray-700 font-medium">Secure & Reliable</span>
+                    <CheckCircleIcon className="text-emerald-300" size="1.25rem" />
+                    <span className="text-white/80 font-medium">Secure & Reliable</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <CheckCircleIcon className="text-emerald-500" size="1.25rem" />
-                    <span className="text-gray-700 font-medium">Easy to Use</span>
+                    <CheckCircleIcon className="text-emerald-300" size="1.25rem" />
+                    <span className="text-white/80 font-medium">Easy to Use</span>
                   </div>
                 </div>
               </div>
             </div>
             
-            {/* Right Content - Hero Image */}
+            {/* Right Content */}
             <div className={`relative scroll-animate fade-left ${heroAnim.isVisible ? 'is-visible' : ''}`} style={{ transitionDelay: '200ms' }}>
-              <div className="relative">
-                {/* Main image */}
-                <img 
-                  src={HERO_IMAGE}
-                  alt="Students at university"
-                  className="rounded-2xl shadow-2xl w-full object-cover aspect-[4/3]"
-                />
-                
-                {/* Floating card 1 */}
-                <div className="absolute -bottom-6 -left-6 bg-white rounded-xl p-4 shadow-lg border border-gray-100 animate-fadeInUp" style={{ animationDelay: '0.5s' }}>
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center">
-                      <GraduationCapIcon className="text-emerald-600" size="1.25rem" />
-                    </div>
-                    <div>
-                      <div className="text-2xl font-bold text-gray-900">500+</div>
-                      <div className="text-sm text-gray-500">Scholarships Awarded</div>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Floating card 2 */}
-                <div className="absolute -top-4 -right-4 bg-white rounded-xl p-4 shadow-lg border border-gray-100 animate-fadeInUp" style={{ animationDelay: '0.7s' }}>
-                  <div className="flex items-center gap-2">
-                    <div className="flex -space-x-2">
-                      <img src={TESTIMONIAL_AVATAR_1} alt="" className="w-8 h-8 rounded-full border-2 border-white object-cover" />
-                      <img src={TESTIMONIAL_AVATAR_2} alt="" className="w-8 h-8 rounded-full border-2 border-white object-cover" />
-                      <img src={TESTIMONIAL_AVATAR_3} alt="" className="w-8 h-8 rounded-full border-2 border-white object-cover" />
-                    </div>
-                    <div className="text-sm">
-                      <span className="font-semibold text-gray-900">1000+</span>
-                      <span className="text-gray-500"> Students</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              {/* Empty — hero image now serves as full background */}
             </div>
           </div>
         </div>
@@ -259,30 +246,54 @@ export function LandingPages() {
           </div>
           
           {/* Features Grid */}
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             <FeatureCard 
-              icon={<ShieldIcon size="1.5rem" />}
-              title="Secure Applications"
-              description="Your data is protected with industry-standard security measures and encrypted communications."
+              icon={<SearchIcon size="1.5rem" />}
+              title="Browse Scholarships"
+              description="Explore available scholarships with details on amounts, slots, deadlines, and requirements."
               delay={0}
             />
             <FeatureCard 
-              icon={<ClockIcon size="1.5rem" />}
-              title="Real-time Tracking"
-              description="Monitor your application status in real-time with instant notifications and updates."
+              icon={<FileTextIcon size="1.5rem" />}
+              title="Apply with Documents"
+              description="Submit scholarship applications with required documents like COE, TOR, and COR."
               delay={100}
             />
             <FeatureCard 
-              icon={<ChartIcon size="1.5rem" />}
-              title="Grade Management"
-              description="Track your academic performance and maintain records for scholarship eligibility."
+              icon={<ClockIcon size="1.5rem" />}
+              title="Track Applications"
+              description="Monitor your pending and past applications with real-time status updates."
               delay={200}
             />
             <FeatureCard 
-              icon={<UsersIcon size="1.5rem" />}
-              title="Admin Dashboard"
-              description="Powerful tools for administrators to review, approve, and manage applications efficiently."
+              icon={<ChartIcon size="1.5rem" />}
+              title="View Academic Grades"
+              description="Check your grades and academic performance to see scholarship eligibility."
               delay={300}
+            />
+            <FeatureCard 
+              icon={<ClipboardIcon size="1.5rem" />}
+              title="Manage Scholarships"
+              description="Admins can create and manage scholarship programs with amounts, slots, and deadlines."
+              delay={400}
+            />
+            <FeatureCard 
+              icon={<CheckCircleIcon size="1.5rem" />}
+              title="Review Applications"
+              description="Admins can review, approve, or reject student applications from a unified dashboard."
+              delay={500}
+            />
+            <FeatureCard 
+              icon={<ShieldIcon size="1.5rem" />}
+              title="Admin User Management"
+              description="Manage admin accounts and student records with role-based access control."
+              delay={600}
+            />
+            <FeatureCard 
+              icon={<ChartIcon size="1.5rem" />}
+              title="Generate Reports"
+              description="Generate and download reports on applications, approvals, and system activity."
+              delay={700}
             />
           </div>
         </div>
@@ -294,10 +305,10 @@ export function LandingPages() {
       <section id="about" className="py-20 bg-gradient-to-r from-emerald-600 to-emerald-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            <StatCounter end={1000} suffix="+" label="Students Served" />
-            <StatCounter end={50} suffix="+" label="Scholarships Available" />
-            <StatCounter end={5000} suffix="+" label="Applications Processed" />
-            <StatCounter end={95} suffix="%" label="Success Rate" />
+            <StatCounter end={250} suffix="+" label="Students Registered" />
+            <StatCounter end={12} suffix="+" label="Active Scholarships" />
+            <StatCounter end={180} suffix="+" label="Applications Processed" />
+            <StatCounter end={85} suffix="%" label="Approval Rate" />
           </div>
         </div>
       </section>
@@ -321,21 +332,26 @@ export function LandingPages() {
           </div>
           
           {/* Steps */}
-          <div className="grid md:grid-cols-3 gap-12 md:gap-8">
+          <div className="grid md:grid-cols-4 gap-8">
             <StepCard 
               number={1}
-              title="Create Account"
-              description="Register with your student information and create a secure account to get started."
+              title="Register & Login"
+              description="Create a student account or log in to access the student portal."
             />
             <StepCard 
               number={2}
-              title="Browse & Apply"
-              description="Explore available scholarships and submit your applications with required documents."
+              title="Browse Scholarships"
+              description="Explore available scholarships and view details like amounts, slots, and deadlines."
             />
             <StepCard 
               number={3}
-              title="Get Approved"
-              description="Track your application status and receive notifications when decisions are made."
+              title="Apply with Documents"
+              description="Submit your application with required documents such as COE, TOR, or COR."
+            />
+            <StepCard 
+              number={4}
+              title="Track & Get Reviewed"
+              description="Track your application status. Admins review and approve or reject applications."
               isLast
             />
           </div>
@@ -363,23 +379,23 @@ export function LandingPages() {
           {/* Testimonials Grid */}
           <div className="grid md:grid-cols-3 gap-6">
             <TestimonialCard 
-              quote="OSAS made my scholarship application process so much easier. I was able to track everything in one place!"
+              quote="I was able to browse all available scholarships and apply directly with my documents. The tracking feature helped me know exactly where my application stood."
               name="Maria Santos"
-              role="Computer Science Student"
+              role="BS Computer Science Student"
               avatar={TESTIMONIAL_AVATAR_2}
               delay={0}
             />
             <TestimonialCard 
-              quote="The real-time notifications kept me informed at every step. I received my scholarship approval within weeks!"
+              quote="The grade viewing feature let me check my academic standing before applying. I could see which scholarships I qualified for based on my grades."
               name="Juan Dela Cruz"
-              role="Engineering Student"
+              role="BS Engineering Student"
               avatar={TESTIMONIAL_AVATAR_1}
               delay={100}
             />
             <TestimonialCard 
-              quote="As an admin, this system has streamlined our entire scholarship management process. Highly recommended!"
+              quote="Managing scholarship programs and reviewing student applications is now much faster. The dashboard gives me a clear overview of everything at a glance."
               name="Dr. Ricardo Reyes"
-              role="Scholarship Coordinator"
+              role="Scholarship Program Administrator"
               avatar={TESTIMONIAL_AVATAR_3}
               delay={200}
             />
@@ -412,7 +428,7 @@ export function LandingPages() {
               to="/login"
               className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-emerald-500 text-white rounded-lg font-semibold hover:bg-emerald-400 transition-all border border-emerald-400"
             >
-              Admin Portal
+              Login
             </NavLink>
           </div>
         </div>
