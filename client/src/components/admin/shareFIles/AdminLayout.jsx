@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API from '../../../API/fetchAPI';
 import { useToast } from '../../../hooks/useToast';
+import { useAuthRole, setAuthRole } from '../../../hooks/useAuthRole';
 import Toast from '../../shared/Toast';
 import { 
   ChartIcon, 
@@ -14,13 +15,29 @@ import {
   FileTextIcon,
   SettingsIcon,
   LogOutIcon,
-  GraduationCapIcon
+  GraduationCapIcon,
+  ShieldIcon
 } from '../../shared/Icons';
 
 const AdminLayout = ({ children, activeMenu, title, subtitle }) => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const navigate = useNavigate();
   const { toasts, showToast, hideToast } = useToast();
+  const role = useAuthRole();
+
+  // Keep the client role mirror in sync with the server-issued role.
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await API.get('/admin/verify');
+        if (res.data.success && res.data.user) {
+          setAuthRole(res.data.user.role || 'admin');
+        }
+      } catch {
+        // ProtectedRoutes handles redirects when verification fails.
+      }
+    })();
+  }, []);
 
   const menuItems = [
     { id: 'dashboard', name: 'Dashboard', icon: <HomeIcon size="1.25rem" />, path: '/dashboard' },
@@ -37,22 +54,20 @@ const AdminLayout = ({ children, activeMenu, title, subtitle }) => {
   };
 
   const handleLogout = async () => {
+    // POST /auth/logout clears both session cookies. It can fail (expired
+    // token -> 401), so clear local state and leave the page either way.
     try {
-      const res = await API.get('/admin/logout');
-      if (res.data.success) {
-        showToast(res.data.message, "success");
-        setTimeout(() => {
-          navigate('/login')
-        }, 1500);
-        return;
-      }
-
-      showToast(res.data.message || "Logout failed", "error");
+      await API.post('/auth/logout');
     } catch (err) {
       console.log(err);
-      showToast("An error occurred during logout", "error");
     }
+    setAuthRole(null);
+    localStorage.removeItem('student_token');
+    showToast('Logged out successfully', 'success');
+    setTimeout(() => navigate('/login'), 600);
   }
+
+  const roleLabel = role === 'superadmin' ? 'Super Admin' : role === 'admin' ? 'Administrator' : 'User';
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -70,7 +85,7 @@ const AdminLayout = ({ children, activeMenu, title, subtitle }) => {
             {sidebarOpen && (
               <div className="flex items-center gap-2">
                 <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center">
-                  <GraduationCapIcon className="text-emerald-600" size="1.25rem" />
+                  <ShieldIcon className="text-emerald-600" size="1.25rem" />
                 </div>
                 <div>
                   <h1 className="text-lg font-bold text-gray-900">OSAS Admin</h1>
@@ -118,8 +133,10 @@ const AdminLayout = ({ children, activeMenu, title, subtitle }) => {
             </div>
             {sidebarOpen && (
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-800 truncate">Admin User</p>
-                <p className="text-xs text-gray-500 truncate">admin@osas.com</p>
+                <p className="text-sm font-medium text-gray-800 truncate">{roleLabel}</p>
+                <p className="text-xs text-gray-500 truncate">
+                  {role === 'superadmin' ? 'Full access' : 'Admin access'}
+                </p>
               </div>
             )}
           </div>
@@ -148,8 +165,10 @@ const AdminLayout = ({ children, activeMenu, title, subtitle }) => {
             </div>
             <div className="flex items-center gap-4">
               <div className="text-right hidden sm:block">
-                <p className="text-sm font-medium text-gray-800">Admin User</p>
-                <p className="text-xs text-gray-500">Administrator</p>
+                <p className="text-sm font-medium text-gray-800">{roleLabel}</p>
+                <p className="text-xs text-gray-500">
+                  {role === 'superadmin' ? 'Full access' : 'Admin access'}
+                </p>
               </div>
               <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-white font-bold">
                 A

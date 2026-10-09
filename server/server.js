@@ -10,7 +10,7 @@ const server = express();
 server.use(cors({
     origin: "http://localhost:5173",
     credentials: true,
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-User-Role'],
     methods: ['GET','POST','PUT','DELETE','OPTIONS']
 }));
 server.use(express.json());
@@ -18,6 +18,7 @@ server.use(cookieParser());
 
 
 // Router
+const authRoutes = require('./routes/authRoutes');
 const applicants = require('./routes/applicantRoutes');
 const adminRoutes = require("./routes/adminRoutes");
 const students = require('./routes/studentRoutes');
@@ -29,6 +30,7 @@ const settingsRoutes = require('./routes/settingsRoutes');
 // Serve uploads directory for document/image access
 server.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+server.use('/auth', authRoutes);
 server.use('/applicants', applicants);
 server.use('/admin', adminRoutes);
 server.use('/students', students);

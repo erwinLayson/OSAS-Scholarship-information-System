@@ -21,7 +21,7 @@ export function Footer() {
   ];
 
   const resources = [
-    { name: 'Student Portal', to: '/student/login' },
+    { name: 'Student Portal', to: '/login' },
     { name: 'Admin Portal', to: '/login' },
     { name: 'Apply Now', to: '/applicant/register' },
     { name: 'FAQ', href: '#' },

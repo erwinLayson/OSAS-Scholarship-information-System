@@ -1,58 +1,12 @@
 const jwt = require('jsonwebtoken');
-const bcrypt = require("bcrypt");
 const { getEnv } = require('../config/env');
 const { sendError } = require('../middleware/errorHandler');
 
 const admin = require("../model/adminModel");
 const applicants = require('../model/applicantsModel');
-const student = require('../model/studentModel');
+const student = require("../model/studentModel");
 
 class adminController {
-    static adminLogin(req, res) {
-        const SECRET_KEY = getEnv('ADMIN_LOGIN_SECRET_KEY');
-        const { username, password } = req.body;
-        
-        if (username === "" || password === "") {
-            return sendError(res, new Error('Fill up all fields'), 400);
-        }
-
-        admin.getByUsername(username, (err, data) => {
-            if (err) return sendError(res, err, 500);
-
-            if (data.length <= 0) {
-                return sendError(res, 'Invalid Username', 401);
-            }
-
-            const adminCredential = data[0];
-
-            // Check if password exists in database record
-            if (!adminCredential.password) {
-                return sendError(res, new Error('Account password not configured'), 500);
-            }
-
-            try {
-                const passwordVerify = bcrypt.compareSync(password, adminCredential.password);
-
-                if (!passwordVerify) {
-                    return sendError(res, new Error('Incorrect Password'), 401);
-                }
-            } catch (bcryptError) {
-                console.error("Password verification error:", bcryptError);
-                return sendError(res, bcryptError, 500);
-            }
-
-            const token = jwt.sign({username}, SECRET_KEY, { expiresIn: "1h" })
-            
-            res.cookie("adminLogin", token ,{
-                httpOnly: true,
-                secure: false,
-                sameSite: "lax",
-            })
-
-            res.status(200).json({ message: "login successfull", success: true });
-        })
-    }
-
     static getAdmin(req, res) {
         const { username } = req.body;
         
@@ -131,17 +85,6 @@ class adminController {
                 res.status(201).json({ message: "Update Successfull", success: true, data: data });
             }
         });
-    }
-
-    static adminLogout(req, res) {
-
-        res.clearCookie("adminLogin", {
-            sameSite: "lax",
-            httpOnly: true,
-            secure: false,
-        })
-
-        res.status(201).json({message: "Logout successfull", success: true})
     }
 
     static getAllApplicants (req, res) {

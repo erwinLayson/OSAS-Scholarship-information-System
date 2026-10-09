@@ -1,5 +1,4 @@
 const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
 const { getEnv } = require('../config/env');
 const { sendError } = require('../middleware/errorHandler');
 const {approvalMail, rejectionMail} = require("./shared/mailer");
@@ -9,7 +8,6 @@ const Applicants = require("../model/applicantsModel");
 const Applicant_history = require("../model/applicant_historyModel");
 const RecentGrades = require('../model/recent_grades');
 const Settings = require('../model/settingsModel');
-const settingsController = require('./settingsController');
 
 
 const studentController = {
@@ -22,9 +20,11 @@ const studentController = {
                 return sendError(res, 'Missing student data or account info', 400);
             }
 
+            // Fall back to the shared DEFAULT_PASSWORD from .env when the client
+            // does not supply one, so client and server use the same default.
             const student = {
                 username: studentAccount.username,
-                password: studentAccount.password,
+                password: studentAccount.password || getEnv('DEFAULT_PASSWORD'),
                 name: studentData.student_name,
                 email: studentData.email,
                 subjects: typeof studentData.subjects === 'string' ? studentData.subjects : JSON.stringify(studentData.subjects)
@@ -97,53 +97,6 @@ const studentController = {
         })
     },
 
-    studentLogin: (req, res) => {
-        const { username, password } = req.body;
-
-        if (username === "" || password === "") {
-            return sendError(res, 'Please fill up all fields', 400);
-        }
-
-        // Check maintenance mode first
-        settingsController.checkMaintenanceMode((err, isMaintenanceMode) => {
-            if (err) {
-                console.error('Error checking maintenance mode:', err);
-                // Continue with login if we can't check maintenance mode
-            }
-            
-            if (isMaintenanceMode) {
-                return sendError(res, 'System is under maintenance. Please try again later.', 503);
-            }
-
-            Students.getStudentByUsername(username, (err, getResult) => {
-                if (err) return sendError(res, 'Database Error', 500);
-                
-                if (getResult.length === 0) {
-                    return sendError(res, 'User not found', 401);
-                }
-
-                const student = getResult[0];
-
-                const verifyPassword = bcrypt.compareSync(password, student.password);
-
-                if (!verifyPassword) {
-                    return sendError(res, 'Incorrect password', 401);
-                }
-
-                const token = jwt.sign({ username, id: student.id }, getEnv('STUDENT_LOGIN_SECRET_KEY'), { expiresIn: "1h" });
-
-                res.cookie("studentLogin", token, {
-                    sameSite: "lax",
-                    httpOnly: true,
-                    secure:false
-                });
-
-                // return token in response body as well (useful for AJAX requests when cookies aren't sent)
-                return res.status(201).json({ message: "Login successfull", success: true, token });
-            })
-        });
-    },
-
     getAll: (req, res) => {
         Students.getAllStudent((err, result) => {
             if (err) return sendError(res, err, 500);
@@ -185,7 +138,7 @@ const studentController = {
             }
 
             approvalMail("Notice in request for account update", "Your new account details", studentData);
-            return studentController.successMessage(res, 200, { message: "Student updated successfully", success: true }, result);
+            return res.status(200).json({ message: "Student updated successfully", success: true });
         })
     },
 
@@ -249,8 +202,8 @@ const studentController = {
 
         // Find student by username to get id
         Students.getStudentByUsername(username, (err, result) => {
-            if (err) return studentController.errorMessage(res, 500, { message: err.message || 'Internal server error', success: false });
-            if (!result || result.length === 0) return studentController.errorMessage(res, 404, { message: 'Student not found', success: false });
+            if (err) return sendError(res, err, 500);
+            if (!result || result.length === 0) return sendError(res, 'Student not found', 404);
 
             const student = result[0];
             const studentId = student.id;
@@ -277,13 +230,13 @@ const studentController = {
                                     // If username was changed, re-issue student JWT so token matches new username
                                     const newUsername = updateData.username || student.username;
                                     try {
-                                        const newToken = require('jsonwebtoken').sign({ username: newUsername, id: studentId }, getEnv('STUDENT_LOGIN_SECRET_KEY'), { expiresIn: '1h' });
+                                        const newToken = require('jsonwebtoken').sign({ username: newUsername, id: studentId, role: 'student' }, getEnv('STUDENT_LOGIN_SECRET_KEY'), { expiresIn: '1h' });
                                         res.cookie('studentLogin', newToken, { sameSite: 'lax', httpOnly: true, secure: false });
-                                        return studentController.successMessage(res, 200, { message: 'Profile updated successfully', success: true, token: newToken }, updateRes);
+                                        return res.status(200).json({ message: 'Profile updated successfully', success: true, token: newToken });
                                     } catch (e) {
                                         // token issuance failed, still return success
                                         console.warn('Failed to sign new token after profile update', e && e.message);
-                                        return studentController.successMessage(res, 200, { message: 'Profile updated successfully', success: true }, updateRes);
+                                        return res.status(200).json({ message: 'Profile updated successfully', success: true });
                                     }
                                 });
                             };
@@ -328,7 +281,7 @@ const studentController = {
                                                         previousAverage = Number((total / previousSubjectsArr.length).toFixed(2));
                                                     }
 
-                                                    RecentGrades.addRecentGrade({ studentId, subjects: previousSubjectsStr, semester: semesterToUse, average: previousAverage, sessionId: sid }, (rgErr) => {
+                                                    RecentGrades.addRecentGrade({ studentId, studentName: student.name || student.student_name || null, subjects: previousSubjectsStr, semester: semesterToUse, average: previousAverage, sessionId: sid }, (rgErr) => {
                                                         if (rgErr) console.warn('Failed to save recent grades:', rgErr && rgErr.message ? rgErr.message : rgErr);
                                                         // proceed with update regardless of snapshot result
                                                         performUpdate();
@@ -411,7 +364,7 @@ const studentController = {
             const hash = require('bcrypt').hashSync(newPassword, 10);
             Students.updateStudent(student.id, { password: hash }, (err2, updateRes) => {
                 if (err2) return sendError(res, err2, 500);
-                return studentController.successMessage(res, 200, { message: 'Password changed successfully', success: true }, updateRes);
+                return res.status(200).json({ message: 'Password changed successfully', success: true });
             });
         });
     },

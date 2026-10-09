@@ -5,6 +5,7 @@ import { useToast } from '../../hooks/useToast';
 import Toast from '../../components/shared/Toast';
 import { StatCard, Card, Badge, Button, Modal } from '../../components/shared/ui';
 import { MoneyIcon, SuccessIcon, PeopleIcon, ClipboardIcon, SearchIcon, EyeIcon, EditIcon, TrashIcon, PlusIcon } from '../../components/shared/Icons';
+import { formatDate } from '../../utils/formatDate';
 
 const Scholarships = () => {
   const { toasts, showToast, hideToast } = useToast();
@@ -291,11 +292,11 @@ const Scholarships = () => {
                         </Badge>
                       </td>
                       <td className="py-4 px-4 text-gray-600 text-sm">
-                        {new Date(scholarship.deadline).toLocaleDateString('en-US', {
+                        {formatDate(scholarship.deadline, {
                           year: 'numeric',
                           month: 'short',
                           day: 'numeric'
-                        })}
+                        }, '—')}
                       </td>
                       <td className="py-4 px-4">
                         <Badge variant={getStatusBadgeVariant(scholarship.status)}>
@@ -449,11 +450,11 @@ const Scholarships = () => {
                   />
                 ) : (
                   <p className="text-gray-900 text-lg bg-gray-50 p-3 rounded-lg">
-                    {new Date(formData.deadline).toLocaleDateString('en-US', {
+                    {formatDate(formData.deadline, {
                       year: 'numeric',
                       month: 'long',
                       day: 'numeric'
-                    })}
+                    }, '—')}
                   </p>
                 )}
               </div>

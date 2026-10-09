@@ -1,54 +1,58 @@
-const jwt = require('jsonwebtoken');
-const { getEnv } = require('../config/env');
+const { ForbiddenError, UnauthorizedError } = require('../middleware/errors');
+const {
+    ROLES,
+    identifyCurrentUser,
+    attachCurrentUser,
+    requireAuth,
+    requireRole,
+} = require('./users');
 
-function authenticateAdmin(req, res, next) {
-    const token = req.cookies.adminLogin;
+/**
+ * Role authentication middleware.
+ *
+ * Everything routes through the global users module (authenticate/users.js),
+ * which identifies "who is the current user and what is their role?" from
+ * whichever session cookie or Bearer token was presented.
+ *
+ *  - no valid session at all        -> 401 Unauthorized
+ *  - valid session but wrong role   -> 403 Forbidden
+ *  - success                        -> req.user / req.currentUser = { username, id, role, ... }
+ */
+function requireAuthenticatedRole(expectedRole) {
+    return (req, res, next) => {
+        const user = identifyCurrentUser(req);
 
-    if (!token) return res.status(401).json({ message: "Authentication required", success: false });
-
-    jwt.verify(token, getEnv('ADMIN_LOGIN_SECRET_KEY'), (err, data) => {
-        if (err) return res.status(403).json({ message: "Invalid or expired token", success: false })
-        
-        req.user = data;
-        next();
-    })
-}
-
-
-function authenticateStudent(req, res, next) {
-    const token = req.cookies.studentLogin;
-    // allow token via cookie or Authorization header (Bearer)
-        let authToken = token;
-        // debug log
-        console.log('authenticateStudent: cookie token present?', !!token, 'Authorization header present?', !!req.headers.authorization);
-    if (!authToken && req.headers && req.headers.authorization) {
-        const parts = req.headers.authorization.split(' ');
-        if (parts.length === 2 && parts[0] === 'Bearer') authToken = parts[1];
-    }
-
-        if (!authToken) {
-            console.warn('authenticateStudent: no token found (cookie or header)');
-            return res.status(401).json({ message: "Authentication required", success: false });
+        if (!user) {
+            return next(new UnauthorizedError('Authentication required'));
         }
 
-        // debug masked token (first/last chars)
-        try {
-            const snippet = authToken && authToken.length ? `${authToken.slice(0,8)}...${authToken.slice(-8)}` : 'N/A';
-            console.log('authenticateStudent: token snippet=', snippet);
-        } catch (e) { /* ignore */ }
+        if (user.role !== expectedRole) {
+            return next(new ForbiddenError(`Requires ${expectedRole} access`));
+        }
 
-        jwt.verify(authToken, getEnv('STUDENT_LOGIN_SECRET_KEY'), (err, data) => {
-            if (err) {
-                console.warn('authenticateStudent: token verify failed', err && err.message);
-                return res.status(403).json({ message: "Invalid or expired token", success: false });
-            }
-        
-        req.user = data;
+        req.user = { role: user.role, ...user.raw };
+        req.currentUser = req.user;
         next();
-    })
+    };
 }
+
+/**
+ * Authenticate an admin. Rejects students and unauthenticated requests.
+ */
+const authenticateAdmin = requireAuthenticatedRole('admin');
+
+/**
+ * Authenticate a student. Rejects admins and unauthenticated requests.
+ */
+const authenticateStudent = requireAuthenticatedRole('student');
 
 module.exports = {
     authenticateAdmin,
-    authenticateStudent
+    authenticateStudent,
+    // Re-exported from the global users module — single implementation.
+    identifyCurrentUser,
+    attachCurrentUser,
+    requireAuth,
+    requireRole,
+    ROLES,
 };

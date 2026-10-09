@@ -310,7 +310,7 @@ const ApplicantRegister = () => {
             <div className="mt-6 pt-6 border-t border-gray-200 text-center">
               <p className="text-sm text-gray-600">
                 Already have an account?{' '}
-                <NavLink to="/student/login" className="font-semibold text-emerald-600 hover:text-emerald-700 transition-colors">
+                <NavLink to="/login" className="font-semibold text-emerald-600 hover:text-emerald-700 transition-colors">
                   Login here
                 </NavLink>
               </p>

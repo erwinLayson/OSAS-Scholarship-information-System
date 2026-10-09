@@ -3,6 +3,7 @@ import API from '../../API/fetchAPI';
 import AdminLayout from '../../components/admin/shareFIles/AdminLayout';
 import { useToast } from '../../hooks/useToast';
 import Toast from '../../components/shared/Toast';
+import { formatDate } from '../../utils/formatDate';
 
 const ManageAdmin = () => {
   const { toasts, showToast, hideToast } = useToast();
@@ -112,9 +113,7 @@ const ManageAdmin = () => {
                     <td className="py-4 px-6 text-green-50 font-medium">{admin.username}</td>
                     <td className="py-4 px-6 text-green-200">{admin.email}</td>
                     <td className="py-4 px-6 text-green-200">
-                      {admin.date_created ? new Intl.DateTimeFormat("en-US", {
-                        month: 'long', day: "2-digit", year: "numeric"
-                      }).format(new Date(admin.date_created)) : 'N/A'}
+                      {formatDate(admin.created_at, 'verbose', 'N/A')}
                     </td>
                     <td className="py-4 px-6">
                       <div className="flex items-center gap-2">

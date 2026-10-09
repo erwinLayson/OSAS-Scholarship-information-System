@@ -4,12 +4,12 @@ import API from '../../API/fetchAPI';
 import { useToast } from '../../hooks/useToast';
 import Toast from '../../components/shared/Toast';
 import { StatCard, Card, Badge, Button, Modal, Input } from '../../components/shared/ui';
+import { parseDate, formatDate, formatDateTime } from '../../utils/formatDate';
 import { UserIcon, SuccessIcon, ErrorIcon, ChartIcon, CloseIcon, SearchIcon, EyeIcon, EditIcon, TrashIcon, ChevronDownIcon, ChevronUpIcon } from '../../components/shared/Icons';
 
 const Students = () => {
   const { toasts, showToast, hideToast } = useToast();
   const [students, setStudents] = useState([]);
-  const [recentGradesMap, setRecentGradesMap] = useState({});
   const [searchTerm, setSearchTerm] = useState('');
   const [filterGrade, setFilterGrade] = useState('All');
   const [showModal, setShowModal] = useState(false);
@@ -26,36 +26,6 @@ const [studentEditData, setStudentEditData] = useState({
 
   useEffect(() => {
     fetchStudents();
-    // prefetch recent grades snapshots for quick per-row summary
-    (async () => {
-      try {
-        const r = await API.get('/admin/recent-grades');
-        if (r.data && r.data.success) {
-          const arr = Array.isArray(r.data.data) ? r.data.data : [];
-          const map = {};
-          arr.forEach(entry => {
-            const sid = String(entry.id);
-            if (!map[sid]) map[sid] = [];
-            map[sid].push(entry);
-          });
-          // reduce to summary: count and latest (first) semester+average
-          const summary = {};
-          Object.keys(map).forEach(sid => {
-            const list = map[sid];
-            // list is in descending create_at order from server
-            const latest = list[0];
-            summary[sid] = {
-              count: list.length,
-              latestSemester: latest ? (latest.semester || '') : '',
-              latestAverage: latest ? (latest.average || null) : null
-            };
-          });
-          setRecentGradesMap(summary);
-        }
-      } catch (e) {
-        console.warn('Failed to load recent grades summary', e && e.message ? e.message : e);
-      }
-    })();
   }, []);
 
   // Helpers
@@ -229,7 +199,8 @@ const [studentEditData, setStudentEditData] = useState({
     }).length;
     
     const thisWeek = students.filter(s => {
-      const createdDate = new Date(s.created_at);
+      const createdDate = parseDate(s.created_at);
+      if (!createdDate) return false;
       const weekAgo = new Date();
       weekAgo.setDate(weekAgo.getDate() - 7);
       return createdDate >= weekAgo;
@@ -349,7 +320,7 @@ const [studentEditData, setStudentEditData] = useState({
                           </span>
                         </td>
                         <td className="py-4 px-4 text-gray-600 text-sm">
-                          {new Intl.DateTimeFormat("en-US", {month: "short", day: "2-digit", year: "numeric"}).format(new Date(student.created_at))}
+                          {formatDate(student.created_at, 'medium')}
                         </td>
                         <td className="py-4 px-4">
                           <div className="flex gap-2">
@@ -452,11 +423,11 @@ const [studentEditData, setStudentEditData] = useState({
                 <div className="bg-gray-50 p-4 rounded-xl">
                   <p className="text-gray-500 text-sm font-medium mb-1">Registration Date</p>
                   <p className="text-gray-900 text-lg">
-                    {new Date(selectedStudent.created_at).toLocaleDateString('en-US', {
+                    {formatDate(selectedStudent.created_at, {
                       year: 'numeric',
                       month: 'long',
                       day: 'numeric'
-                    })}
+                    }, 'Not available')}
                   </p>
                 </div>
                 <div className="bg-gray-50 p-4 rounded-xl">
@@ -586,10 +557,10 @@ const [studentEditData, setStudentEditData] = useState({
                                   <div className="mt-4 space-y-3">
                                     {items.map((entry, idx) => {
                                       let subs = [];
-                                      try { subs = typeof entry.grades === 'string' ? JSON.parse(entry.grades) : entry.grades; } catch (e) { subs = []; }
-                                      const created = entry.create_at ? new Date(entry.create_at).toLocaleString() : '';
+                                      try { subs = typeof entry.subjects === 'string' ? JSON.parse(entry.subjects) : entry.subjects; } catch (e) { subs = []; }
+                                      const created = formatDateTime(entry.created_at, '');
                                       return (
-                                        <div key={entry.recent_grade_id || idx} className="bg-gray-50 p-4 rounded-lg">
+                                        <div key={entry.id || idx} className="bg-gray-50 p-4 rounded-lg">
                                           <div className="flex items-start justify-between mb-3">
                                             <div>
                                               <div className="text-sm text-gray-600">Snapshot: {created}</div>

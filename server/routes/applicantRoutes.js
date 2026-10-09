@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const applicantsController = require('../controller/applicantController');
-const { authenticateAdmin } = require("../authenticate/auth");
+const { authenticateAdmin, requireRole } = require("../authenticate/auth");
 
-// Create a new student
+// Applicant registration - publicly accessible (no auth required)
 router.post('/register', applicantsController.createApplicant);
 
 module.exports = router;

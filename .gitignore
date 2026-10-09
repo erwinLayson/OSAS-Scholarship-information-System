@@ -1,0 +1,32 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+dist-ssr/
+
+# Environment secrets — never commit
+.env
+.env.*
+server/.env
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Editor / OS
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+.idea
+*.local
+
+# Generated report exports (runtime artifacts)
+server/generated_reports/*.csv
+
+# Legacy SQL archived by migrate.js, superseded by numbered migrations
+server/database/_archive_*/

@@ -165,7 +165,7 @@ export function LandingPages() {
               
               <div className="flex flex-col sm:flex-row gap-4">
                 <NavLink 
-                  to="/student/login"
+                  to="/login"
                   className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-lg font-semibold hover:bg-emerald-700 transition-all hover:shadow-lg hover:shadow-emerald-200 hover:-translate-y-0.5"
                 >
                   Get Started

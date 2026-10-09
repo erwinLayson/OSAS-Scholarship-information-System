@@ -37,6 +37,9 @@ export function Navbar() {
     setMobileMenuOpen(false);
   };
 
+  // The landing-page links/auth buttons are pointless on the login/register screens.
+  const isAuthPage = location.pathname === '/login' || location.pathname === '/register';
+
   return (
     <>
       <header 
@@ -64,7 +67,8 @@ export function Navbar() {
             </NavLink>
 
             {/* Desktop Navigation */}
-            <nav className="hidden md:flex items-center gap-8">
+            {!isAuthPage && (
+              <nav className="hidden md:flex items-center gap-8">
               {/* Nav Links */}
               <ul className="flex items-center gap-6">
                 {navLinks.map((link) => (
@@ -85,20 +89,16 @@ export function Navbar() {
               <div className="flex items-center gap-3 pl-6 border-l border-gray-200">
                 <NavLink 
                   to="/login" 
-                  className="px-4 py-2 text-gray-700 hover:text-emerald-600 font-medium transition-colors"
-                >
-                  Admin Login
-                </NavLink>
-                <NavLink 
-                  to="/student/login" 
                   className="px-5 py-2.5 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700 transition-all hover:shadow-lg hover:shadow-emerald-200"
                 >
-                  Student Portal
+                  Login
                 </NavLink>
               </div>
             </nav>
+            )}
 
             {/* Mobile Menu Button */}
+            {!isAuthPage && (
             <button 
               className="md:hidden p-2 text-gray-600 hover:text-emerald-600 hover:bg-gray-100 rounded-lg transition-colors"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -114,6 +114,7 @@ export function Navbar() {
                 </svg>
               )}
             </button>
+            )}
           </div>
         </div>
       </header>
@@ -173,23 +174,9 @@ export function Navbar() {
               <li>
                 <NavLink 
                   to="/login" 
-                  className={({ isActive }) => `
-                    block px-4 py-3 rounded-lg font-medium transition-colors
-                    ${isActive 
-                      ? 'bg-emerald-50 text-emerald-600' 
-                      : 'text-gray-600 hover:text-emerald-600 hover:bg-emerald-50'
-                    }
-                  `}
-                >
-                  Admin Login
-                </NavLink>
-              </li>
-              <li>
-                <NavLink 
-                  to="/student/login" 
                   className="block px-4 py-3 bg-emerald-600 text-white text-center rounded-lg font-medium hover:bg-emerald-700 transition-colors"
                 >
-                  Student Portal
+                  Login
                 </NavLink>
               </li>
             </ul>

@@ -5,6 +5,11 @@ import { useToast } from '../../hooks/useToast';
 import Toast from '../../components/shared/Toast';
 import { StatCard, Card, Badge, Button, Modal } from '../../components/shared/ui';
 import { ClipboardIcon, HourglassIcon, SuccessIcon, BookIcon, SearchIcon, EyeIcon, CheckCircleIcon, CloseIcon as XCircleIcon } from '../../components/shared/Icons';
+import { formatDate } from '../../utils/formatDate';
+
+// Default password pre-filled when creating a student account.
+// Sourced from server/.env (DEFAULT_PASSWORD) so client and server stay consistent.
+const DEFAULT_PASSWORD = import.meta.env.DEFAULT_PASSWORD || '';
 
 const Applications = () => {
     const [applications, setApplications] = useState([]);
@@ -12,7 +17,7 @@ const Applications = () => {
     const [showModal, setShowModal] = useState(false);
     const [selectedStudent, setSelectedStudent] = useState(null);
     const [showAccountModal, setShowAccountModal] = useState(false);
-    const [accountData, setAccountData] = useState({ username: '', password: '123456' });
+    const [accountData, setAccountData] = useState({ username: '', password: DEFAULT_PASSWORD });
     const [loading, setLoading] = useState(false);
     const { toasts, showToast, hideToast } = useToast();
     
@@ -62,12 +67,12 @@ const Applications = () => {
   const handleApprove = () => {
     setShowModal(false);
     setShowAccountModal(true);
-    setAccountData({ username: '', password: '123456' });
+    setAccountData({ username: '', password: DEFAULT_PASSWORD });
   };
 
   const handleCloseAccountModal = () => {
     setShowAccountModal(false);
-    setAccountData({ username: '', password: '123456' });
+    setAccountData({ username: '', password: DEFAULT_PASSWORD });
     setSelectedStudent(null);
   };
 // create student account
@@ -216,7 +221,7 @@ const Applications = () => {
                 {filteredApplications.length > 0 ? (
                   filteredApplications.map((app) => {
                     const subjects = app.subjects ? JSON.parse(app.subjects) : [];
-                    const formattedDate = new Date(app.created_at).toLocaleDateString('en-US', {
+                    const formattedDate = formatDate(app.created_at, {
                       year: 'numeric',
                       month: 'short',
                       day: 'numeric'
@@ -378,7 +383,7 @@ const Applications = () => {
                   className="w-full px-4 py-2.5 bg-gray-50 text-gray-900 border border-gray-200 rounded-lg"
                   disabled={loading}
                 />
-                <p className="text-gray-500 text-xs mt-1">Default password: 123456</p>
+                <p className="text-gray-500 text-xs mt-1">Default password: {DEFAULT_PASSWORD}</p>
               </div>
 
               {/* Action Buttons */}
@@ -425,13 +430,13 @@ const Applications = () => {
                 <div className="bg-gray-50 p-4 rounded-xl">
                   <p className="text-gray-500 text-sm font-medium mb-1">Registration Date</p>
                   <p className="text-gray-900 text-lg">
-                    {new Date(selectedStudent.created_at).toLocaleDateString('en-US', {
+                    {formatDate(selectedStudent.created_at, {
                       year: 'numeric',
                       month: 'long',
                       day: 'numeric',
                       hour: '2-digit',
                       minute: '2-digit'
-                    })}
+                    }, 'Not available')}
                   </p>
                 </div>
                 <div className="bg-gray-50 p-4 rounded-xl">

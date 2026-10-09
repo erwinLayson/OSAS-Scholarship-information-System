@@ -4,6 +4,7 @@ import API from '../../API/fetchAPI';
 import { useToast } from '../../hooks/useToast';
 import Toast from '../../components/shared/Toast';
 import { CloseIcon } from '../../components/shared/Icons';
+import { formatDate } from '../../utils/formatDate';
 
 // Modal for viewing application documents
 const ApplicationDocumentsModal = ({ visible, onClose, app }) => {
@@ -206,7 +207,7 @@ const ScholarshipApplications = () => {
                       <td className="py-4 px-6 text-gray-800">{app.student_name || app.student_name}</td>
                       <td className="py-4 px-6 text-gray-800">{app.email || ''}</td>
                       <td className="py-4 px-6 text-gray-800">{app.scholarship_name || '—'}</td>
-                      <td className="py-4 px-6 text-gray-800">{new Date(app.created_at).toLocaleDateString()}</td>
+                      <td className="py-4 px-6 text-gray-800">{formatDate(app.created_at)}</td>
                       <td className="py-4 px-6">
                         <span className="px-3 py-1 rounded text-sm font-medium bg-yellow-500 text-white">
                           {app.status}
@@ -310,8 +311,8 @@ const ScholarshipApplications = () => {
                         <td className="py-4 px-6 text-gray-800">{app.student_name || '—'}</td>
                         <td className="py-4 px-6 text-gray-800">{app.email || ''}</td>
                         <td className="py-4 px-6 text-gray-800">{app.scholarship_name || '—'}</td>
-                        <td className="py-4 px-6 text-gray-800">{app.created_at ? new Date(app.created_at).toLocaleDateString() : '—'}</td>
-                        <td className="py-4 px-6 text-gray-800">{app.processed_at ? new Date(app.processed_at).toLocaleDateString() : '—'}</td>
+                        <td className="py-4 px-6 text-gray-800">{formatDate(app.created_at, 'short', '—')}</td>
+                        <td className="py-4 px-6 text-gray-800">{formatDate(app.processed_at, 'short', '—')}</td>
                         <td className="py-4 px-6">
                           <span className={`px-3 py-1 rounded text-sm font-medium ${
                             app.status === 'Approved' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'

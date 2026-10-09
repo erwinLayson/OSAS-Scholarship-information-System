@@ -1,175 +1,315 @@
+#!/usr/bin/env node
+/**
+ * Database migration runner for the OSAS server.
+ *
+ * Usage:
+ *   node migrate.js                       – run pending migrations against the default DB
+ *   node migrate.js --dir <path>         – use a custom migrations directory
+ *   node migrate.js --env production     – load .env.production instead of .env
+ *   node migrate.js --seed               – also run 000_seed.sql if present (one-off data)
+ *   node migrate.js --list                – show what would run without running it
+ *   node migrate.js --up-to <n>          – only run migrations up to and including 00n_xxx.sql
+ *
+ * Environment variables (used when not passed via flags):
+ *   DB_HOST, DB_USER, DB_PASSWORD, DB_NAME
+ *
+ * The runner:
+ *   1. Connects to MySQL.
+ *   2. Ensures the `migrations` tracking table exists (via 001_create_migrations_table.sql).
+ *   3. Reads migration files in lexicographic order (001_xxx.sql, 002_xxx.sql, ...).
+ *   4. Skips files already recorded in `migrations.filename`.
+ *   5. Executes pending files in order, recording each after success.
+ *   6. If any file fails, stops and exits with code 1.
+ */
+
 const mysql = require('mysql2/promise');
 const fs = require('fs');
 const path = require('path');
 
-/**
- * Migration runner for MySQL schema changes.
- * Reads .sql files from a migrations directory, checks the migrations table
- * to see which have already been applied, and runs the ones that haven't.
- */
-class Migrator {
-  /**
-   * @param {Object} dbConfig - mysql2/promise connection config
-   * @param {string} migrationDir - directory containing numbered SQL files
-   */
-  constructor(dbConfig, migrationDir) {
-    this.dbConfig = dbConfig;
-    this.migrationDir = migrationDir;
-  }
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
-  /**
-   * Get connection (creates one per run, caller can also pass a pool/connection).
-   */
-  async _getConnection() {
-    return mysql.createConnection(this.dbConfig);
-  }
-
-  /**
-   * List migration files sorted by name (assumes filename-based ordering,
-   * e.g. 001_create_xxx.sql, 002_add_yyy.sql).
-   */
-  _listMigrationFiles() {
-    if (!fs.existsSync(this.migrationDir)) {
-      throw new Error(`Migration directory not found: ${this.migrationDir}`);
-    }
-    const files = fs.readdirSync(this.migrationDir).filter((f) => f.endsWith('.sql'));
-    if (files.length === 0) return [];
-    files.sort(); // lexicographic sort works for zero-padded numbers
-    return files.map((f) => path.join(this.migrationDir, f));
-  }
-
-  /**
-   * Fetch already-applied migration filenames from the migrations table.
-   */
-  async _getAppliedMigrationNames(conn) {
-    const [rows] = await conn.query(
-      'SELECT filename FROM migrations ORDER BY id'
-    );
-    return new Set(rows.map((r) => r.filename));
-  }
-
-  /**
-   * Record that a migration was applied.
-   */
-  async _recordMigration(conn, filename) {
-    await conn.query('INSERT INTO migrations (filename) VALUES (?)', [filename]);
-  }
-
-  /**
-   * Run all pending migrations. Returns an object summarising the run.
-   * @param {Object} [options] - { connection?: mysql2 connection (optional) }
-   */
-  async run({ connection } = {}) {
-    const conn = connection || (await this._getConnection());
-    let released = false;
-    try {
-      // Ensure migrations table exists before querying it
-      await this._ensureMigrationsTable(conn);
-
-      const applied = await this._getAppliedMigrationNames(conn);
-      const files = this._listMigrationFiles();
-      const pending = files.filter((f) => !applied.has(path.basename(f)));
-
-      if (pending.length === 0) {
-        return { applied: [], skipped: files.map((f) => path.basename(f)) };
-      }
-
-      const appliedFiles = [];
-      const log = [];
-
-      for (const filePath of pending) {
-        const filename = path.basename(filePath);
-        const sql = fs.readFileSync(filePath, 'utf8');
-        log.push(`Running migration: ${filename}`);
-
-        try {
-          await conn.query(sql);
-          await this._recordMigration(conn, filename);
-          appliedFiles.push(filename);
-          log.push(`  -> applied`);
-        } catch (err) {
-          log.push(`  -> failed: ${err.message || err}`);
-          throw new Error(`Migration failed: ${filename} — ${err.message || err}`);
-        }
-      }
-
-      return {
-        applied: appliedFiles,
-        skipped: files.filter((f) => applied.has(path.basename(f))).map((f) => path.basename(f)),
-        log,
-      };
-    } finally {
-      if (!released && !connection) {
-        await conn.end();
-      }
+function parseArgs(argv) {
+  const args = { dir: null, env: 'development', seed: false, list: false, upTo: null };
+  for (let i = 2; i < argv.length; i++) {
+    const a = argv[i];
+    if (a === '--dir' && argv[i + 1]) {
+      args.dir = argv[++i];
+    } else if (a === '--env' && argv[i + 1]) {
+      args.env = argv[++i];
+    } else if (a === '--seed') {
+      args.seed = true;
+    } else if (a === '--list') {
+      args.list = true;
+    } else if (a === '--up-to' && argv[i + 1]) {
+      args.upTo = argv[++i];
+    } else if (a === '--help' || a === '-h') {
+      printHelp();
+      process.exit(0);
     }
   }
-
-  /**
-   * Run the initial migrations_table.sql on the connection if it doesn't exist.
-   * Used to bootstrap the tracking table itself.
-   */
-  async _ensureMigrationsTable(conn) {
-    const migrationsTableSql = path.join(this.migrationDir, 'migrations_table.sql');
-    if (fs.existsSync(migrationsTableSql)) {
-      const sql = fs.readFileSync(migrationsTableSql, 'utf8');
-      await conn.query(sql);
-    }
-  }
+  return args;
 }
 
-/**
- * Bootstraps and runs migrations, then optionally keeps a persistent
- * connection for the app to reuse. Call this at server startup.
- *
- * @param {Object} dbConfig
- * @param {string} migrationDir
- * @returns {Object} { migrator, connection } — connection is left open when
- *   `keepConnection` is true (default false).
- */
-async function runMigrations(dbConfig, migrationDir, { keepConnection = false } = {}) {
-  const migrator = new Migrator(dbConfig, migrationDir);
-  const conn = await mysql.createConnection(dbConfig);
-  try {
-    await migrator._ensureMigrationsTable(conn);
-    const result = await migrator.run({ connection: conn });
-    if (!keepConnection) {
-      await conn.end();
-      return result;
-    }
-    return { result, connection: conn, migrator };
-  } catch (err) {
-    await conn.end();
-    throw err;
-  }
+function printHelp() {
+  console.log(`
+Usage: node migrate.js [options]
+
+Options:
+  --dir <path>      Path to the directory containing numbered .sql migration files.
+                    Default: <project>/server/database
+  --env <name>      Which .env file to load. Default: development (uses .env).
+                    Use "production" to load .env.production, etc.
+  --seed            Also execute 000_seed.sql if present (one-off seed SQL).
+  --list            List pending migrations without running them (dry-run).
+  --up-to <n>       Only run migrations up to and including 00n_xxx.sql.
+                    Example: --up-to 3 runs 001, 002, 003 and nothing newer.
+  --help, -h        Show this help.
+`);
 }
 
-module.exports = { Migrator, runMigrations };
-
-// When run directly: `node migrate.js` or `npm run migrate`
-if (require.main === module) {
-  const dbConfig = {
+function buildDbConfig() {
+  return {
     host: process.env.DB_HOST || 'localhost',
     user: process.env.DB_USER || 'root',
     password: process.env.DB_PASSWORD || '',
     database: process.env.DB_NAME || 'osas_database',
+    multipleStatements: true,
   };
+}
 
-  const migrationDir = path.resolve(__dirname, 'database');
+function resolveMigrationsDir(provided) {
+  if (provided) return path.resolve(provided);
+  // Default: server/database, resolved relative to this file's location.
+  return path.resolve(__dirname, 'database');
+}
 
-  runMigrations(dbConfig, migrationDir)
-    .then((result) => {
-      if (result.applied.length) {
-        console.log(`Migrations applied: ${result.applied.join(', ')}`);
+// ---------------------------------------------------------------------------
+// Migration runner
+// ---------------------------------------------------------------------------
+
+class Migrator {
+  /**
+   * @param {Object} dbConfig
+   * @param {string} migrationDir
+   * @param {boolean} includeSeed
+   */
+  constructor(dbConfig, migrationDir, includeSeed = false) {
+    this.dbConfig = dbConfig;
+    this.migrationDir = migrationDir;
+    this.includeSeed = includeSeed;
+  }
+
+  async connect() {
+    return mysql.createConnection(this.dbConfig);
+  }
+
+  _listFiles() {
+    if (!fs.existsSync(this.migrationDir)) {
+      throw new Error(`Migrations directory not found: ${this.migrationDir}`);
+    }
+    const entries = fs.readdirSync(this.migrationDir);
+    const sqlFiles = entries
+      .filter((f) => /^[0-9]{3}_.*\.sql$/.test(f))
+      .map((f) => path.join(this.migrationDir, f))
+      .sort();
+
+    if (this.includeSeed) {
+      const seedPath = path.join(this.migrationDir, '000_seed.sql');
+      if (fs.existsSync(seedPath)) {
+        sqlFiles.unshift(seedPath);
+      }
+    }
+
+    return sqlFiles;
+  }
+
+  async ensureMigrationsTable(conn) {
+    // 001 itself bootstraps the tracking table.
+    const files = this._listFiles();
+    const firstFile = files.find((f) => /001_create_migrations_table\.sql$/.test(path.basename(f)));
+    if (!firstFile) {
+      throw new Error('Missing 001_create_migrations_table.sql — cannot bootstrap migrations table.');
+    }
+    const sql = fs.readFileSync(firstFile, 'utf8');
+    await conn.query(sql);
+  }
+
+  async getApplied(conn) {
+    const [rows] = await conn.query('SELECT filename FROM migrations ORDER BY id');
+    return new Set(rows.map((r) => r.filename));
+  }
+
+  async record(conn, filename) {
+    await conn.query('INSERT INTO migrations (filename) VALUES (?)', [filename]);
+  }
+
+  async runAll({ dryRun = false, upTo = null } = {}) {
+    const conn = await this.connect();
+    try {
+      await this.ensureMigrationsTable(conn);
+      const applied = await this.getApplied(conn);
+      let files = this._listFiles();
+
+      // Filter based on --up-to (by the numeric prefix).
+      if (upTo != null) {
+        const upToNum = Number(upTo);
+        if (!Number.isInteger(upToNum) || upToNum < 1) {
+          throw new Error(`--up-to must be a positive integer, got: ${upTo}`);
+        }
+        files = files.filter((f) => {
+          const num = Number(path.basename(f).slice(0, 3));
+          return Number.isFinite(num) && num <= upToNum;
+        });
+      }
+
+      const pending = files.filter((f) => !applied.has(path.basename(f)));
+
+      if (pending.length === 0) {
+        const skipped = files.map((f) => path.basename(f));
+        return { applied: [], pending: [], skipped };
+      }
+
+      const report = { applied: [], pending: [], skipped: [], log: [] };
+
+      for (const filePath of pending) {
+        const filename = path.basename(filePath);
+        const sql = fs.readFileSync(filePath, 'utf8');
+
+        report.log.push(`[${filename}]`);
+
+        if (dryRun) {
+          report.log.push('  -> would run (dry-run)');
+          report.pending.push(filename);
+          continue;
+        }
+
+        try {
+          await conn.query(sql);
+          await this.record(conn, filename);
+          report.applied.push(filename);
+          report.log.push('  -> applied');
+        } catch (err) {
+          const msg = err.message || err;
+          report.log.push(`  -> FAILED: ${msg}`);
+          throw new Error(`Migration failed: ${filename} — ${msg}`);
+        }
+      }
+
+      // Populate skipped list with files already applied (present in DB but not in this run's applied list).
+      for (const f of files) {
+        const name = path.basename(f);
+        if (applied.has(name) && !report.applied.includes(name)) {
+          if (!report.skipped.includes(name)) {
+            report.skipped.push(name);
+          }
+        }
+      }
+
+      return report;
+    } finally {
+      await conn.end();
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// CLI entry point
+// ---------------------------------------------------------------------------
+
+async function main() {
+  const args = parseArgs(process.argv);
+  const dbConfig = buildDbConfig();
+  const migrationDir = resolveMigrationsDir(args.dir);
+  const migrator = new Migrator(dbConfig, migrationDir, args.seed);
+
+  console.log(`Migrations directory: ${migrationDir}`);
+  console.log(`Database: ${dbConfig.host}/${dbConfig.database} (as ${dbConfig.user})`);
+  if (args.env !== 'development') {
+    console.log(`Env file used: .env.${args.env}`);
+  }
+  if (args.seed) {
+    console.log('Seed file (000_seed.sql) will be run first if present.');
+  }
+  if (args.upTo != null) {
+    console.log(`Bounded to migration 00${args.upTo}_*.sql (inclusive).`);
+  }
+  if (args.list) {
+    console.log('Mode: dry-run (--list)');
+  }
+  console.log('');
+
+  try {
+    const report = await migrator.runAll({ dryRun: args.list, upTo: args.upTo });
+
+    if (args.list) {
+      console.log('Pending migrations (not yet applied):');
+      if (report.pending.length === 0) {
+        console.log('  (none — all migrations already applied)');
       } else {
-        console.log('No new migrations to apply');
+        for (const name of report.pending) {
+          console.log(`  - ${name}`);
+        }
       }
-      if (result.skipped.length) {
-        console.log(`Already applied (skipped): ${result.skipped.join(', ')}`);
+      if (report.skipped.length) {
+        console.log('\nSkipped (already applied or out of range):');
+        for (const name of report.skipped) {
+          console.log(`  - ${name}`);
+        }
       }
-    })
-    .catch((err) => {
-      console.error('Migration failed:', err.message || err);
-      process.exit(1);
-    });
+      return;
+    }
+
+    if (report.applied.length) {
+      console.log(`Applied ${report.applied.length} migration(s):`);
+      for (const line of report.log) {
+        if (line.includes('-> applied')) {
+          console.log(`  ${line}`);
+        }
+      }
+    } else {
+      console.log('No new migrations to apply.');
+    }
+
+    if (report.skipped.length) {
+      console.log(`Already applied (skipped): ${report.skipped.join(', ')}`);
+    }
+  } catch (err) {
+    console.error(`\nError: ${err.message || err}`);
+    process.exitCode = 1;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Module export + CLI guard
+// ---------------------------------------------------------------------------
+
+module.exports = { Migrator, runMigrations: async (dbConfig, migrationDir, opts = {}) => {
+  const migrator = new Migrator(dbConfig, migrationDir, opts.includeSeed);
+  return migrator.runAll(opts);
+} };
+
+if (require.main === module) {
+  // Load the appropriate .env file before building config.
+  const args = parseArgs(process.argv);
+  const dotenv = require('dotenv');
+
+  if (args.env === 'development') {
+    dotenv.config();
+  } else {
+    const envPath = path.resolve(__dirname, `.env.${args.env}`);
+    if (fs.existsSync(envPath)) {
+      dotenv.config({ path: envPath });
+      console.log(`Loaded environment from: ${envPath}`);
+    } else {
+      console.warn(`Warning: .env.${args.env} not found at ${envPath}`);
+      dotenv.config();
+    }
+  }
+
+  main().catch((err) => {
+    console.error('Unhandled error:', err);
+    process.exit(1);
+  });
 }

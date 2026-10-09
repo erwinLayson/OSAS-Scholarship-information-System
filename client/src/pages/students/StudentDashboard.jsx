@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API from '../../API/fetchAPI';
 import { useToast } from '../../hooks/useToast';
+import { clearAuthRole } from '../../hooks/useAuthRole';
 import Toast from '../../components/shared/Toast';
 import { StatCard, Badge, Button, Card, Modal } from '../../components/shared/ui';
+import { formatDate } from '../../utils/formatDate';
 import { 
   BookIcon, 
   ChartIcon, 
@@ -321,7 +323,7 @@ const ApplicationDetailsModal = ({ isOpen, application, onClose }) => {
           </div>
           <div className="bg-gray-50 p-4 rounded-lg">
             <p className="text-sm text-gray-500">Date</p>
-            <p className="font-medium text-gray-800">{new Date(application.processed_at || application.created_at).toLocaleDateString()}</p>
+            <p className="font-medium text-gray-800">{formatDate(application.processed_at || application.created_at)}</p>
           </div>
         </div>
         {documents.length > 0 && (
@@ -557,7 +559,7 @@ const ScholarshipsView = ({
                   {scholarship.deadline && (
                     <div className="flex items-center gap-2">
                       <ClipboardIcon className="text-orange-600" size="1rem" />
-                      <span className="text-gray-700">Deadline: <strong>{new Date(scholarship.deadline).toLocaleDateString()}</strong></span>
+                      <span className="text-gray-700">Deadline: <strong>{formatDate(scholarship.deadline)}</strong></span>
                     </div>
                   )}
                 </div>
@@ -710,7 +712,7 @@ const ApplicationsView = ({
                     </div>
                     <div>
                       <p className="font-semibold text-gray-800">{app.scholarship_name || `Scholarship #${app.scholarship_id}`}</p>
-                      <p className="text-sm text-gray-500">Applied on {new Date(app.created_at).toLocaleDateString()}</p>
+                      <p className="text-sm text-gray-500">Applied on {formatDate(app.created_at)}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
@@ -832,7 +834,7 @@ const ApplicationsView = ({
                       </div>
                       <div>
                         <p className="font-semibold text-gray-800">{app.scholarship_name || `Scholarship #${app.scholarship_id}`}</p>
-                        <p className="text-sm text-gray-500">Processed on {new Date(app.processed_at).toLocaleDateString()}</p>
+                        <p className="text-sm text-gray-500">Processed on {formatDate(app.processed_at)}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
@@ -1028,15 +1030,15 @@ const GradesView = ({
           {recentHistory.map((entry, idx) => {
             let subs = [];
             try {
-              subs = typeof entry.grades === 'string' ? JSON.parse(entry.grades) : entry.grades;
+              subs = typeof entry.subjects === 'string' ? JSON.parse(entry.subjects) : entry.subjects;
             } catch (e) { subs = []; }
             const avg = subs.length > 0 ? (subs.reduce((a,b) => a + Number(b.grade || b.score || 0), 0) / subs.length).toFixed(2) : 'N/A';
-            const isExpanded = expandedHistoryId === (entry.recent_grade_id || idx);
+            const isExpanded = expandedHistoryId === (entry.id || idx);
 
             return (
-              <div key={entry.recent_grade_id || idx} className="border border-gray-200 rounded-xl overflow-hidden">
+              <div key={entry.id || idx} className="border border-gray-200 rounded-xl overflow-hidden">
                 <button
-                  onClick={() => setExpandedHistoryId(isExpanded ? null : (entry.recent_grade_id || idx))}
+                  onClick={() => setExpandedHistoryId(isExpanded ? null : (entry.id || idx))}
                   className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 transition-colors"
                 >
                   <div className="flex items-center gap-4">
@@ -1045,7 +1047,7 @@ const GradesView = ({
                     </div>
                     <div className="text-left">
                       <p className="font-semibold text-gray-800">
-                        {entry.semester || new Date(entry.create_at).toLocaleDateString()}
+                        {entry.semester || formatDate(entry.created_at)}
                       </p>
                       <p className="text-sm text-gray-500">{subs.length} subjects • Average: {avg}</p>
                     </div>
@@ -1365,7 +1367,7 @@ const StudentDashboard = () => {
       // If authentication fails, redirect to login
       if (error.response?.status === 401 || error.response?.status === 403) {
         showToast('Session expired. Please login again.', 'error');
-        setTimeout(() => navigate('/student/login'), 2000);
+        setTimeout(() => navigate('/login'), 2000);
       }
     } finally {
       setLoading(false);
@@ -1469,8 +1471,17 @@ const StudentDashboard = () => {
     { id: 'profile', name: 'Profile', icon: <UserIcon size="1.25rem" /> },
   ];
 
-  const handleLogout = () => {
-    navigate('/student/login');
+  const handleLogout = async () => {
+    // End the session server-side (clears the httpOnly cookie) and drop the
+    // client-side role mirror so the route guard stops accepting this session.
+    try {
+      await API.post('/auth/logout');
+    } catch (err) {
+      console.error('Logout request failed:', err);
+    }
+    clearAuthRole();
+    localStorage.removeItem('student_token');
+    navigate('/login');
   };
 
   // Handler for saving grades

@@ -3,6 +3,7 @@ import AdminLayout from '../../components/admin/shareFIles/AdminLayout';
 import API from '../../API/fetchAPI';
 import { StatCard, Card, Badge, Button } from '../../components/shared/ui';
 import { PeopleIcon, MoneyIcon, ClipboardIcon, SuccessIcon, ChartIcon, HourglassIcon, SearchIcon, DownloadIcon, TrashIcon, FileTextIcon } from '../../components/shared/Icons';
+import { formatDate, formatDateTime } from '../../utils/formatDate';
 
 const Reports = () => {
   const [reportType, setReportType] = useState('students');
@@ -348,7 +349,7 @@ const Reports = () => {
                     <span className="text-purple-700 text-sm font-medium">Last Generated</span>
                     <HourglassIcon size="1.25rem" className="text-purple-500" />
                   </div>
-                  <p className="text-lg font-bold text-gray-900">{summary && summary.lastGenerated ? new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(summary.lastGenerated.created_at)) : 'N/A'}</p>
+                  <p className="text-lg font-bold text-gray-900">{formatDateTime(summary?.lastGenerated?.created_at, 'N/A')}</p>
                   <p className="text-purple-600 text-xs mt-1">{summary && summary.lastGenerated ? summary.lastGenerated.name : ''}</p>
                 </div>
 
@@ -440,11 +441,7 @@ const Reports = () => {
                       </td>
                       <td className="py-4 px-4 text-gray-600">{report.generatedBy}</td>
                       <td className="py-4 px-4 text-gray-600 text-sm">
-                        {new Date(report.date).toLocaleDateString('en-US', {
-                          year: 'numeric',
-                          month: 'short',
-                          day: 'numeric'
-                        })}
+                        {formatDate(report.date, { year: 'numeric', month: 'short', day: 'numeric' })}
                       </td>
                       <td className="py-4 px-4 text-gray-600">{report.size}</td>
                       <td className="py-4 px-4">

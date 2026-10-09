@@ -4,27 +4,26 @@ const express = require('express');
 const studentController = require('../controller/studentController');
 
 // middle ware
-const { authenticateStudent, authenticateAdmin } = require("../authenticate/auth");
+const { authenticateStudent, authenticateAdmin, requireRole } = require("../authenticate/auth");
 
 const route = express.Router();
 
-// auth by admin
-route.post('/create', authenticateAdmin, studentController.createStudent);
-route.post('/reject', authenticateAdmin, studentController.rejectStudent);
-route.get('/student_list', authenticateAdmin, studentController.getAll);
-route.put('/edit/:id', authenticateAdmin, studentController.editStudent);
+// Admin-only student management
+route.post('/create', authenticateAdmin, requireRole('admin'), studentController.createStudent);
+route.post('/reject', authenticateAdmin, requireRole('admin'), studentController.rejectStudent);
+route.get('/student_list', authenticateAdmin, requireRole('admin'), studentController.getAll);
+route.put('/edit/:id', authenticateAdmin, requireRole('admin'), studentController.editStudent);
 // Admin delete student
-route.delete('/:id', authenticateAdmin, studentController.deleteStudent);
+route.delete('/:id', authenticateAdmin, requireRole('admin'), studentController.deleteStudent);
 
 // student routes authenticate
-route.post('/login', studentController.studentLogin);
-route.get('/profile', authenticateStudent, studentController.getProfile);
+route.get('/profile', authenticateStudent, requireRole('student'), studentController.getProfile);
 // Student self-service routes
-route.put('/profile', authenticateStudent, studentController.updateProfile);
-route.post('/profile/password', authenticateStudent, studentController.changePassword);
+route.put('/profile', authenticateStudent, requireRole('student'), studentController.updateProfile);
+route.post('/profile/password', authenticateStudent, requireRole('student'), studentController.changePassword);
 
 // Student can view their own recent grades history
 const recentGradesController = require('../controller/recentGradesController');
-route.get('/recent-grades', authenticateStudent, recentGradesController.getForCurrent);
+route.get('/recent-grades', authenticateStudent, requireRole('student'), recentGradesController.getForCurrent);
 
 module.exports = route;
