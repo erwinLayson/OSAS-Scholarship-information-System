@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
-const db = require('./config/database');
+const mysql = require('mysql2');
 const fs = require('fs');
 const path = require('path');
 
@@ -36,28 +36,37 @@ server.use('/scholarships', scholarshipRoutes);
 server.use('/reports', reportRoutes);
 server.use('/settings', settingsRoutes);
 
-server.listen(3000, () => {
-    console.log("server is running in http://localhost:3000");
-        // Run DB migrations for reports table if SQL file exists
-        try {
-            const sqlPath = path.join(__dirname, 'database', 'reports_table.sql');
-            if (fs.existsSync(sqlPath)) {
-                const sql = fs.readFileSync(sqlPath, 'utf8');
-                db.query(sql, (err) => {
-                    if (err) console.warn('Error running reports_table.sql:', err.message || err);
-                    else console.log('Reports table ensured');
-                });
-            }
-            // run scholarship applications table migration if present
-            const appSql = path.join(__dirname, 'database', 'scholarship_applications_table.sql');
-            if (fs.existsSync(appSql)) {
-                const sql2 = fs.readFileSync(appSql, 'utf8');
-                db.query(sql2, (err) => {
-                    if (err) console.warn('Error running scholarship_applications_table.sql:', err.message || err);
-                    else console.log('Scholarship applications table ensured');
-                });
-            }
-        } catch (e) {
-            console.warn('Migration check failed', e.message || e);
+// Database config (same shape used by the existing database.js)
+const dbConfig = {
+    host: "localhost",
+    user: "root",
+    password: "",
+    database: "osas_database"
+};
+
+async function boot() {
+    const migrate = require('./migrate');
+    const migrationDir = path.join(__dirname, 'database');
+
+    // Run pending migrations before accepting traffic
+    try {
+        const res = await migrate.runMigrations(dbConfig, migrationDir);
+        if (res.applied.length) {
+            console.log(`Migrations applied: ${res.applied.join(', ')}`);
+        } else {
+            console.log('No new migrations to apply');
         }
+    } catch (mErr) {
+        // Don't crash the server if a migration is non-fatal; log and continue.
+        console.warn('Migration run failed (non-fatal):', mErr.message || mErr);
+    }
+
+    server.listen(3000, () => {
+        console.log("server is running in http://localhost:3000");
+    });
+}
+
+boot().catch((e) => {
+    console.error('Failed to start server:', e);
+    process.exit(1);
 });
