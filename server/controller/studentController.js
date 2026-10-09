@@ -1,6 +1,7 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const { getEnv } = require('../config/env');
+const { sendError } = require('../middleware/errorHandler');
 const {approvalMail, rejectionMail} = require("./shared/mailer");
 
 const Students = require('../model/studentModel');
@@ -12,21 +13,13 @@ const settingsController = require('./settingsController');
 
 
 const studentController = {
-    errorMessage: (res, status, msg) => {
-        return res.status(status).json(msg)
-    },
-
-    successMessage: (res, status, msg, data) => {
-        return res.status(status).json(msg)
-    },
-
     createStudent: (req, res) => {
         try {
             const { studentData, studentAccount } = req.body;
 
             if (!studentData || !studentAccount) {
                 console.error('Missing data:', { studentData, studentAccount });
-                return res.status(400).json({ message: "Missing student data or account info", success: false });
+                return sendError(res, 'Missing student data or account info', 400);
             }
 
             const student = {
@@ -42,7 +35,7 @@ const studentController = {
             Students.createStudent(student, (err) => {
                 if (err) {
                     console.error('Database error:', err);
-                    return res.status(500).json({ message: err.message || "Internal Server Error", success: false });
+                    return sendError(res, err, 500);
                 }
 
                 approvalMail(
@@ -58,12 +51,12 @@ const studentController = {
                 }
 
                 Applicant_history.create(newHistory, (err) => {
-                    if (err) return studentController.errorMessage(res, 500, { message: err.message || "Internal server error", success: false });
+                    if (err) return sendError(res, err, 500);
                     
                     Applicants.delete(studentData.id, (err) => {
-                        if (err) return studentController.errorMessage(res, 500, { message: err.message || "Internal server error", success: false });
+                        if (err) return sendError(res, err, 500);
 
-                        studentController.errorMessage(res, 201, { message: "Student Approve Successfull", success: true });
+                        res.status(201).json({ message: "Student Approve Successfull", success: true });
                     })
                 })
                 
@@ -78,10 +71,10 @@ const studentController = {
         const studentEmail = req.body.email;
 
         Applicants.getByEmail(studentEmail, (err, result) => {
-            if (err) return studentController.errorMessage(res, 500, { message: err.message || "Internal server error", success: false });
+            if (err) return sendError(res, err, 500);
             
             if (!result || result.length === 0) {
-                return studentController.errorMessage(res, 404, { message: "Student not found", success: false });
+                return sendError(res, 'Student not found', 404);
             }
 
             const newHistory = {
@@ -92,13 +85,13 @@ const studentController = {
             }
 
             Applicant_history.create(newHistory, (err) => {
-                if (err) return studentController.errorMessage(res, 500, { message: err.message || "Internal server error", succes: false });
+                if (err) return sendError(res, err, 500);
     
                 Applicants.delete(result[0].id, (delErr, delResult) => {
-                    if (delErr) return studentController.errorMessage(res, 500, { message: delErr.message || "Internal server error", success: false });
+                    if (delErr) return sendError(res, delErr, 500);
 
                     rejectionMail( studentEmail,"Notice of rejection of application", "Scholarship application rejected", "Your average grade not pass the Scholarship requirements");
-                    return studentController.successMessage(res, 200, { message: "Student rejected and deleted successfully", success: true }, delResult);
+                    return res.status(200).json({ message: "Student rejected and deleted successfully", success: true });
                 });
             })
         })
@@ -108,7 +101,7 @@ const studentController = {
         const { username, password } = req.body;
 
         if (username === "" || password === "") {
-            return studentController.errorMessage(res, 400, { message: "Please fill up all fields", success: false });
+            return sendError(res, 'Please fill up all fields', 400);
         }
 
         // Check maintenance mode first
@@ -119,14 +112,14 @@ const studentController = {
             }
             
             if (isMaintenanceMode) {
-                return studentController.errorMessage(res, 503, { message: "System is under maintenance. Please try again later.", success: false });
+                return sendError(res, 'System is under maintenance. Please try again later.', 503);
             }
 
             Students.getStudentByUsername(username, (err, getResult) => {
-                if (err) return studentController.errorMessage(res, 500, { message: "Database Error", success: false })
+                if (err) return sendError(res, 'Database Error', 500);
                 
                 if (getResult.length === 0) {
-                    return studentController.errorMessage(res, 401, { message: "User not found", success: false })
+                    return sendError(res, 'User not found', 401);
                 }
 
                 const student = getResult[0];
@@ -134,7 +127,7 @@ const studentController = {
                 const verifyPassword = bcrypt.compareSync(password, student.password);
 
                 if (!verifyPassword) {
-                    return studentController.errorMessage(res, 401, { message: "Incorrect password", success: false })
+                    return sendError(res, 'Incorrect password', 401);
                 }
 
                 const token = jwt.sign({ username, id: student.id }, getEnv('STUDENT_LOGIN_SECRET_KEY'), { expiresIn: "1h" });
@@ -146,16 +139,16 @@ const studentController = {
                 });
 
                 // return token in response body as well (useful for AJAX requests when cookies aren't sent)
-                return studentController.successMessage(res, 201, { message: "Login successfull", success: true, token });
+                return res.status(201).json({ message: "Login successfull", success: true, token });
             })
         });
     },
 
     getAll: (req, res) => {
         Students.getAllStudent((err, result) => {
-            if (err) return studentController.errorMessage(res, 500, { message: err.message || "Internal server error", success: false });
+            if (err) return sendError(res, err, 500);
 
-            return studentController.successMessage(res, 201, result);
+            return res.status(201).json(result);
         })
     },
 
@@ -165,7 +158,7 @@ const studentController = {
 
         // Validate required fields (password is optional)
         if (!studentData.name || !studentData.email || !studentData.username) {
-            return studentController.errorMessage(res, 400, { message: "Name, email, and username are required", success: false });
+            return sendError(res, 'Name, email, and username are required', 400);
         }
 
         // Remove password from update if it's empty
@@ -180,15 +173,15 @@ const studentController = {
         Students.updateStudent(studentId, updateData, (err, result) => {
             if (err) {
                 console.error('Update error:', err);
-                return studentController.errorMessage(res, 500, { message: err.message || "Internal server error", success: false });
+                return sendError(res, err, 500);
             }
             
             if (result.affectedRows === 0) {
-                return studentController.errorMessage(res, 404, { message: "Student not found", success: false });
+                return sendError(res, 'Student not found', 404);
             }
 
             if (result.affectedRows === 0) {
-                return studentController.successMessage(res, 201, {message: "No update change", succes: true})
+                return res.status(201).json({message: "No update change", success: true})
             }
 
             approvalMail("Notice in request for account update", "Your new account details", studentData);
@@ -202,14 +195,14 @@ const studentController = {
         Students.deleteStudent(studentId, (err, result) => {
             if (err) {
                 console.error('Delete error:', err);
-                return studentController.errorMessage(res, 500, { message: err.message || 'Internal server error', success: false });
+                return sendError(res, err, 500);
             }
 
             if (!result || result.affectedRows === 0) {
-                return studentController.errorMessage(res, 404, { message: 'Student not found', success: false });
+                return sendError(res, 'Student not found', 404);
             }
 
-            return studentController.successMessage(res, 200, { message: 'Student deleted successfully', success: true }, result);
+            return res.status(200).json({ message: 'Student deleted successfully', success: true });
         });
     },
 
@@ -218,11 +211,11 @@ const studentController = {
 
         Students.getStudentByUsername(username, (err, result) => {
             if (err) {
-                return studentController.errorMessage(res, 500, { message: "Internal server error", success: false });
+                return sendError(res, err, 500);
             }
 
             if (result.length === 0) {
-                return studentController.errorMessage(res, 404, { message: "Student not found", success: false });
+                return sendError(res, 'Student not found', 404);
             }
 
             const student = result[0];
@@ -251,7 +244,7 @@ const studentController = {
         const updateData = req.body;
 
         if (!updateData || Object.keys(updateData).length === 0) {
-            return studentController.errorMessage(res, 400, { message: 'No data provided', success: false });
+            return sendError(res, 'No data provided', 400);
         }
 
         // Find student by username to get id
@@ -279,7 +272,7 @@ const studentController = {
                             // perform update
                             const performUpdate = () => {
                                 Students.updateStudent(studentId, updateData, (err2, updateRes) => {
-                                    if (err2) return studentController.errorMessage(res, 500, { message: err2.message || 'Internal server error', success: false });
+                                    if (err2) return sendError(res, err2, 500);
 
                                     // If username was changed, re-issue student JWT so token matches new username
                                     const newUsername = updateData.username || student.username;
@@ -355,7 +348,7 @@ const studentController = {
                                                     }
 
                                                     if (rows && rows.length > 0) {
-                                                        return studentController.errorMessage(res, 403, { message: 'You have already updated grades for the current admin-enabled session', success: false });
+                                                        return sendError(res, 'You have already updated grades for the current admin-enabled session', 403);
                                                     }
 
                                                     // not updated in this session yet -> save snapshot with session id and update
@@ -380,11 +373,11 @@ const studentController = {
                 }
 
                 checks[i]((errc, rc) => {
-                    if (errc) return studentController.errorMessage(res, 500, { message: errc.message || 'Internal server error', success: false });
+                    if (errc) return sendError(res, errc, 500);
                     // rc may contain rows; ignore the row that belongs to the current student
                     if (rc && rc.length > 0) {
                         const other = rc.find(r => r.id !== studentId);
-                        if (other) return studentController.errorMessage(res, 400, { message: 'Email or username already in use', success: false });
+                        if (other) return sendError(res, 'Email or username already in use', 409, { isDuplicate: true });
                         // otherwise the only match is the current student -> allow
                     }
                     runChecks(i+1);
@@ -400,24 +393,24 @@ const studentController = {
         const { currentPassword, newPassword, confirmPassword } = req.body;
 
         if (!currentPassword || !newPassword || !confirmPassword) {
-            return studentController.errorMessage(res, 400, { message: 'All password fields are required', success: false });
+            return sendError(res, 'All password fields are required', 400);
         }
 
         if (newPassword !== confirmPassword) {
-            return studentController.errorMessage(res, 400, { message: 'New password and confirm password do not match', success: false });
+            return sendError(res, 'New password and confirm password do not match', 400);
         }
 
         Students.getStudentByUsername(username, (err, result) => {
-            if (err) return studentController.errorMessage(res, 500, { message: err.message || 'Internal server error', success: false });
-            if (!result || result.length === 0) return studentController.errorMessage(res, 404, { message: 'Student not found', success: false });
+            if (err) return sendError(res, err, 500);
+            if (!result || result.length === 0) return sendError(res, 'Student not found', 404);
 
             const student = result[0];
             const verify = require('bcrypt').compareSync(currentPassword, student.password);
-            if (!verify) return studentController.errorMessage(res, 401, { message: 'Current password is incorrect', success: false });
+            if (!verify) return sendError(res, 'Current password is incorrect', 401);
 
             const hash = require('bcrypt').hashSync(newPassword, 10);
             Students.updateStudent(student.id, { password: hash }, (err2, updateRes) => {
-                if (err2) return studentController.errorMessage(res, 500, { message: err2.message || 'Internal server error', success: false });
+                if (err2) return sendError(res, err2, 500);
                 return studentController.successMessage(res, 200, { message: 'Password changed successfully', success: true }, updateRes);
             });
         });

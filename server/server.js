@@ -36,6 +36,10 @@ server.use('/scholarships', scholarshipRoutes);
 server.use('/reports', reportRoutes);
 server.use('/settings', settingsRoutes);
 
+// Centralized error handler (must be after all routes)
+const { errorHandler } = require('./middleware/errorHandler');
+server.use(errorHandler);
+
 // Database config (same shape used by the existing database.js)
 const dbConfig = {
     host: "localhost",

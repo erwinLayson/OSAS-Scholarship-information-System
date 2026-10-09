@@ -1,14 +1,11 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require("bcrypt");
 const { getEnv } = require('../config/env');
+const { sendError } = require('../middleware/errorHandler');
 
 const admin = require("../model/adminModel");
 const applicants = require('../model/applicantsModel');
 const student = require('../model/studentModel');
-
-function errorMessage(res, stauts, message) {
-    return res.status(stauts).json(message)
-}
 
 class adminController {
     static adminLogin(req, res) {
@@ -16,32 +13,32 @@ class adminController {
         const { username, password } = req.body;
         
         if (username === "" || password === "") {
-            return errorMessage(res, 400, { message: "Fill up all fields", success: false });
+            return sendError(res, new Error('Fill up all fields'), 400);
         }
 
         admin.getByUsername(username, (err, data) => {
-            if (err) return errorMessage(res, 500, { message: "Internal server error", success: false });
+            if (err) return sendError(res, err, 500);
 
             if (data.length <= 0) {
-                return errorMessage(res, 401, {message: "Invalid Username", success: false})
+                return sendError(res, 'Invalid Username', 401);
             }
 
             const adminCredential = data[0];
 
             // Check if password exists in database record
             if (!adminCredential.password) {
-                return errorMessage(res, 500, { message: "Account password not configured", success: false });
+                return sendError(res, new Error('Account password not configured'), 500);
             }
 
             try {
                 const passwordVerify = bcrypt.compareSync(password, adminCredential.password);
 
                 if (!passwordVerify) {
-                    return errorMessage(res, 401, { message: "Incorrect Password", success: false });
+                    return sendError(res, new Error('Incorrect Password'), 401);
                 }
             } catch (bcryptError) {
                 console.error("Password verification error:", bcryptError);
-                return errorMessage(res, 500, { message: "Password verification failed", success: false });
+                return sendError(res, bcryptError, 500);
             }
 
             const token = jwt.sign({username}, SECRET_KEY, { expiresIn: "1h" })
@@ -60,11 +57,11 @@ class adminController {
         const { username } = req.body;
         
         if (!username) {
-            return errorMessage(res, 400, {message: "Username is required", success: false});
+            return sendError(res, 'Username is required', 400);
         }
         
         admin.getByUsername(username, (err, data) => {
-            if(err) return errorMessage(res, 500, {message: "Internal server error", success: false, error: err})
+            if(err) return sendError(res, err, 500);
 
             res.status(200).json({ message: "admin get success", success: true, data: data });
         })
@@ -75,14 +72,14 @@ class adminController {
         const token = req.cookies.adminLogin;
 
         if (!token) {
-            return errorMessage(res, 401, { message: "Not authenticated", success: false });
+            return sendError(res, 'Not authenticated', 401);
         }
 
         try {
             const decoded = jwt.verify(token, SECRET_KEY);
             res.status(200).json({ message: "Authenticated", success: true, user: decoded });
         } catch (err) {
-            return errorMessage(res, 401, { message: "Invalid or expired token", success: false });
+            return sendError(res, 'Invalid or expired token', 401);
         }
     }
 
@@ -93,19 +90,17 @@ class adminController {
         ));
 
         if (!isFill) {
-            return errorMessage(res, 400, { message: "Fill up all fields", success: false });
-        }
+            return sendError(res, 'Fill up all fields', 400);
+        }            admin.getByEmail(data.email, (err, result) => {
+                if (err) return sendError(res, err, 500);
 
-        admin.getByEmail(data.email, (err, result) => {
-            if (err) return errorMessage(res, 500, { message: "Database error", error: err, success: false });
-            
-            if (result.length > 0) {
-                return errorMessage(res, 400, {message: "Email already exists", success: false})
-            }
+                if (result.length > 0) {
+                    return sendError(res, 'Email already exists', 409, { isDuplicate: true });
+                }
 
             admin.create(data, (error) => {
-                if (error) return errorMessage(res, 500, { message: "Database error", success: false, error: error });
-                
+                if (error) return sendError(res, error, 500);
+
                 res.status(201).json({message: "Account created successfully", success: true})
             })
         })
@@ -113,7 +108,7 @@ class adminController {
 
     static getAllAdmins(req, res) {
         admin.getAll((err, data) => {
-            if(err) return errorMessage(res, 500, {message: "Internal server error", success: false, error: err})
+            if(err) return sendError(res, err, 500);
 
             res.status(200).json({ message: "Admins retrieved successfully", success: true, data: data });
         })
@@ -123,10 +118,10 @@ class adminController {
         const { password, confirmPassword } = req.body;
 
         if (password !== confirmPassword) {
-            return errorMessage(res, 200, { message: "password not match", success: false});
+            return sendError(res, 'Password not match', 400);
         }
         admin.update(password, (err, data) => {
-            if (err) return errorMessage(res, 500, { message: "Internal server error", success: false, error: err });
+            if (err) return sendError(res, err, 500);
 
             if (data.changedRows == 0) {
                 res.status(201).json({ message: "No Update happen", success: true, data: data });
@@ -151,7 +146,7 @@ class adminController {
 
     static getAllApplicants (req, res) {
         applicants.getAll((err, data) => {
-            if (err) return res.status(500).json("Internal server Error");
+            if (err) return sendError(res, err, 500);
 
             res.status(200).json(data);
         }) 
@@ -162,14 +157,14 @@ class adminController {
         student.getAllStudent((err, students) => {
             if (err) {
                 console.error('Error fetching students:', err);
-                return errorMessage(res, 500, { message: "Internal server error", success: false, error: err });
+                return sendError(res, err, 500);
             }
 
             // Get all applicants
             applicants.getAll((err2, applications) => {
                 if (err2) {
                     console.error('Error fetching applicants:', err2);
-                    return errorMessage(res, 500, { message: "Internal server error", success: false, error: err2 });
+                    return sendError(res, err2, 500);
                 }
 
                 const stats = {

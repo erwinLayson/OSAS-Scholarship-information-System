@@ -1,6 +1,7 @@
 const Appicant_history = require('../model/applicant_historyModel');
 const applicants = require('../model/applicantsModel');
 const settingsController = require('./settingsController');
+const { sendError } = require('../middleware/errorHandler');
 
 const applicantsController = {
   // Create a new student
@@ -11,46 +12,30 @@ const applicantsController = {
                 console.error('Error checking maintenance mode:', err);
             }
             if (isMaintenanceMode) {
-                return res.status(503).json({
-                    success: false,
-                    message: 'System is under maintenance. Registration is temporarily disabled.'
-                });
+                return sendError(res, 'System is under maintenance. Registration is temporarily disabled.', 503);
             }
 
             const { studentName, email, subjects } = req.body;
 
         // Validation
         if (!studentName || !email || !subjects) {
-            return res.status(400).json({
-                success: false,
-                message: 'Please provide all required fields: studentName, email, and subjects'
-            });
-            }
+            return sendError(res, 'Please provide all required fields: studentName, email, and subjects', 400);
+        }
 
             // Enforce SKSU email domain
             const sksuRegex = /^[\w.+-]+@sksu\.edu\.ph$/i;
             if (!sksuRegex.test((email || '').trim())) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Only sksu.edu.ph email addresses are allowed'
-                });
+                return sendError(res, 'Only sksu.edu.ph email addresses are allowed', 400);
             }
 
             // Check if email already exists
             applicants.getByEmail(email, (err, results) => {
             if (err) {
-                return res.status(500).json({
-                success: false, 
-                message: 'Database error',
-                error: err
-                });
+                return sendError(res, err, 500);
             }
 
             if (results.length > 0) {
-                return res.status(409).json({
-                success: false,
-                message: 'Email already exists'
-                });
+                return sendError(res, 'Email already exists', 409, { isDuplicate: true });
             }
 
             // Create student
@@ -58,11 +43,7 @@ const applicantsController = {
             
             applicants.create(studentData, (err, result) => {
                 if (err) {
-                        return res.status(500).json({
-                            success: false,
-                            message: 'Failed to create student',
-                            error: err
-                        });
+                        return sendError(res, err, 500);
                     }
 
                     res.status(201).json({

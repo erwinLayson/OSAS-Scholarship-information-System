@@ -1,11 +1,8 @@
 const { sendScholarshipMail } = require('./shared/mailer');
 const Student = require('../model/studentModel');
+const { sendError } = require('../middleware/errorHandler');
 
 const Scholarship = require('../model/scholarshipModel');
-
-function errorMessage(res, status, message) {
-    return res.status(status).json(message);
-}
 
 class ScholarshipController {
     // Create a new scholarship
@@ -15,24 +12,17 @@ class ScholarshipController {
         // Validate required fields
         if (!scholarshipData.name || !scholarshipData.description || !scholarshipData.amount || 
             !scholarshipData.slots || !scholarshipData.deadline) {
-            return errorMessage(res, 400, { 
-                message: "All fields are required", 
-                success: false 
-            });
+            return sendError(res, 'All fields are required', 400);
         }
 
         Scholarship.create(scholarshipData, (err, result) => {
             if (err) {
                 console.error('Error creating scholarship:', err);
-                return errorMessage(res, 500, { 
-                    message: "Internal server error", 
-                    success: false, 
-                    error: err 
-                });
+                return sendError(res, err, 500);
             }
 
             Student.getAllStudent((err, result) => {
-                if (err) return errorMessage(res, 500, { message: err.message || "Internal server error", success: false });
+                if (err) return sendError(res, err, 500);
 
                 const studentsEmail = result.map(student => student.email);
                 console.log(studentsEmail);
@@ -52,11 +42,7 @@ class ScholarshipController {
         Scholarship.getAll((err, scholarships) => {
             if (err) {
                 console.error('Error fetching scholarships:', err);
-                return errorMessage(res, 500, { 
-                    message: "Internal server error", 
-                    success: false, 
-                    error: err 
-                });
+                return sendError(res, err, 500);
             }
 
             res.status(200).json({ 
@@ -74,18 +60,11 @@ class ScholarshipController {
         Scholarship.getById(id, (err, scholarship) => {
             if (err) {
                 console.error('Error fetching scholarship:', err);
-                return errorMessage(res, 500, { 
-                    message: "Internal server error", 
-                    success: false, 
-                    error: err 
-                });
+                return sendError(res, err, 500);
             }
 
             if (scholarship.length === 0) {
-                return errorMessage(res, 404, { 
-                    message: "Scholarship not found", 
-                    success: false 
-                });
+                return sendError(res, 'Scholarship not found', 404);
             }
 
             res.status(200).json({ 
@@ -104,18 +83,11 @@ class ScholarshipController {
         Scholarship.update(id, scholarshipData, (err, result) => {
             if (err) {
                 console.error('Error updating scholarship:', err);
-                return errorMessage(res, 500, { 
-                    message: "Internal server error", 
-                    success: false, 
-                    error: err 
-                });
+                return sendError(res, err, 500);
             }
 
             if (result.affectedRows === 0) {
-                return errorMessage(res, 404, { 
-                    message: "Scholarship not found", 
-                    success: false 
-                });
+                return sendError(res, 'Scholarship not found', 404);
             }
 
             res.status(200).json({ 
@@ -132,18 +104,11 @@ class ScholarshipController {
         Scholarship.delete(id, (err, result) => {
             if (err) {
                 console.error('Error deleting scholarship:', err);
-                return errorMessage(res, 500, { 
-                    message: "Internal server error", 
-                    success: false, 
-                    error: err 
-                });
+                return sendError(res, err, 500);
             }
 
             if (result.affectedRows === 0) {
-                return errorMessage(res, 404, { 
-                    message: "Scholarship not found", 
-                    success: false 
-                });
+                return sendError(res, 'Scholarship not found', 404);
             }
 
             res.status(200).json({ 

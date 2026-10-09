@@ -145,3 +145,31 @@ async function runMigrations(dbConfig, migrationDir, { keepConnection = false } 
 }
 
 module.exports = { Migrator, runMigrations };
+
+// When run directly: `node migrate.js` or `npm run migrate`
+if (require.main === module) {
+  const dbConfig = {
+    host: process.env.DB_HOST || 'localhost',
+    user: process.env.DB_USER || 'root',
+    password: process.env.DB_PASSWORD || '',
+    database: process.env.DB_NAME || 'osas_database',
+  };
+
+  const migrationDir = path.resolve(__dirname, 'database');
+
+  runMigrations(dbConfig, migrationDir)
+    .then((result) => {
+      if (result.applied.length) {
+        console.log(`Migrations applied: ${result.applied.join(', ')}`);
+      } else {
+        console.log('No new migrations to apply');
+      }
+      if (result.skipped.length) {
+        console.log(`Already applied (skipped): ${result.skipped.join(', ')}`);
+      }
+    })
+    .catch((err) => {
+      console.error('Migration failed:', err.message || err);
+      process.exit(1);
+    });
+}

@@ -1,5 +1,5 @@
 const nodemailer = require("nodemailer");
-const { getEnv } = require('../config/env');
+const { getEnv } = require('../../config/env');
 
 const systemEmail = getEnv('SYSTEM_GMAIL');
 

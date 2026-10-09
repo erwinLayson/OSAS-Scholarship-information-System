@@ -3,6 +3,7 @@ const fs = require('fs');
 const ScholarshipApplication = require('../model/scholarshipApplicationModel');
 const { authenticateStudent } = require('../authenticate/auth');
 const { sendScholarshipMail, rejectionMail } = require('./shared/mailer');
+const { sendError } = require('../middleware/errorHandler');
 
 class ScholarshipApplicationController {
   // Handles file uploads and creates an application record
@@ -12,17 +13,17 @@ class ScholarshipApplicationController {
     console.log('ScholarshipApplicationController.apply: req.user=', student);
     const scholarship_id = req.params.id;
 
-    if (!student || !student.id) return res.status(401).json({ message: 'Authentication required', success: false });
+    if (!student || !student.id) return sendError(res, 'Authentication required', 401);
 
     // Before saving files, ensure the student hasn't already applied to this scholarship
     ScholarshipApplication.getByStudentAndScholarship(student.id, scholarship_id, (checkErr, existingRows) => {
       if (checkErr) {
         console.error('Error checking existing application:', checkErr);
-        return res.status(500).json({ message: 'Internal server error', success: false, error: checkErr });
+        return sendError(res, checkErr, 500);
       }
 
       if (existingRows && existingRows.length > 0) {
-        return res.status(400).json({ message: 'You have already applied for this scholarship', success: false });
+        return sendError(res, 'You have already applied for this scholarship', 409, { isDuplicate: true });
       }
 
       // files handled by multer are available as req.files
@@ -52,24 +53,23 @@ class ScholarshipApplicationController {
         ScholarshipApplication.create(payload, (err, result) => {
           if (err) {
             console.error('Error saving scholarship application:', err);
-            return res.status(500).json({ message: 'Failed to save application', success: false, error: err });
+            return sendError(res, err, 500);
           }
 
           return res.status(201).json({ message: 'Application submitted', success: true, applicationId: result.insertId });
         });
       } catch (e) {
         console.error('Apply error', e);
-        return res.status(500).json({ message: 'Failed to process files', success: false, error: e.message });
+        return sendError(res, e, 500);
       }
     });
   }
 
   static listAll(req, res) {
-    const ScholarshipApplication = require('../model/scholarshipApplicationModel');
     ScholarshipApplication.getAll((err, rows) => {
       if (err) {
         console.error('Error fetching applications:', err);
-        return res.status(500).json({ message: 'Internal server error', success: false, error: err });
+        return sendError(res, err, 500);
       }
       return res.status(200).json({ message: 'Applications retrieved', success: true, data: rows });
     });
@@ -77,12 +77,12 @@ class ScholarshipApplicationController {
 
   static listByStudent(req, res) {
     const student = req.user;
-    if (!student || !student.id) return res.status(401).json({ message: 'Authentication required', success: false });
+    if (!student || !student.id) return sendError(res, 'Authentication required', 401);
 
     ScholarshipApplication.getByStudent(student.id, (err, rows) => {
       if (err) {
         console.error('Error fetching student applications:', err);
-        return res.status(500).json({ message: 'Internal server error', success: false, error: err });
+        return sendError(res, err, 500);
       }
 
       // parse documents JSON safely
@@ -99,8 +99,8 @@ class ScholarshipApplicationController {
   static getById(req, res) {
     const id = req.params.id;
     ScholarshipApplication.getById(id, (err, rows) => {
-      if (err) return res.status(500).json({ message: 'Internal server error', success: false, error: err });
-      if (!rows || rows.length === 0) return res.status(404).json({ message: 'Application not found', success: false });
+      if (err) return sendError(res, err, 500);
+      if (!rows || rows.length === 0) return sendError(res, 'Application not found', 404);
       return res.status(200).json({ message: 'Application retrieved', success: true, data: rows[0] });
     });
   }
@@ -108,23 +108,23 @@ class ScholarshipApplicationController {
   static updateStatus(req, res) {
     const id = req.params.id;
     const { status } = req.body;
-    if (!status) return res.status(400).json({ message: 'Status required', success: false });
+    if (!status) return sendError(res, 'Status required', 400);
 
     // Only move to history if approved or rejected
     if (status !== 'Approved' && status !== 'Rejected') {
-      return res.status(400).json({ message: 'Status must be Approved or Rejected', success: false });
+      return sendError(res, 'Status must be Approved or Rejected', 400);
     }
 
     const { reduceAvailableSlots } = require('../model/scholarshipSlotUtils');
 
     ScholarshipApplication.getById(id, (err, rows) => {
-      if (err) return res.status(500).json({ message: 'Internal server error', success: false, error: err });
-      if (!rows || rows.length === 0) return res.status(404).json({ message: 'Application not found', success: false });
+      if (err) return sendError(res, err, 500);
+      if (!rows || rows.length === 0) return sendError(res, 'Application not found', 404);
       const app = rows[0];
 
       // Move application to history and delete from active table
       ScholarshipApplication.moveToHistory(id, status, (moveErr) => {
-        if (moveErr) return res.status(500).json({ message: 'Failed to process application', success: false, error: moveErr });
+        if (moveErr) return sendError(res, moveErr, 500);
 
         // If approving, reduce available slots
         if (status === 'Approved') {
@@ -172,8 +172,8 @@ class ScholarshipApplicationController {
     const index = parseInt(req.params.index || '0', 10);
 
     ScholarshipApplication.getById(id, (err, rows) => {
-      if (err) return res.status(500).json({ message: 'Internal server error', success: false, error: err });
-      if (!rows || rows.length === 0) return res.status(404).json({ message: 'Application not found', success: false });
+      if (err) return sendError(res, err, 500);
+      if (!rows || rows.length === 0) return sendError(res, 'Application not found', 404);
 
       const app = rows[0];
       let docs = app.documents || app.documents;
@@ -184,13 +184,13 @@ class ScholarshipApplicationController {
       }
 
       if (!Array.isArray(docs) || docs.length === 0 || index < 0 || index >= docs.length) {
-        return res.status(404).json({ message: 'Document not found', success: false });
+        return sendError(res, 'Document not found', 404);
       }
 
       const docPath = docs[index];
       const fullPath = path.join(__dirname, '..', docPath);
 
-      if (!fs.existsSync(fullPath)) return res.status(404).json({ message: 'File not found on server', success: false });
+      if (!fs.existsSync(fullPath)) return sendError(res, 'File not found on server', 404);
 
       return res.sendFile(fullPath);
     });
@@ -200,7 +200,7 @@ class ScholarshipApplicationController {
     ScholarshipApplication.getHistory((err, rows) => {
       if (err) {
         console.error('Error fetching application history:', err);
-        return res.status(500).json({ message: 'Internal server error', success: false, error: err });
+        return sendError(res, err, 500);
       }
       return res.status(200).json({ message: 'Application history retrieved', success: true, data: rows });
     });
@@ -208,12 +208,12 @@ class ScholarshipApplicationController {
 
   static listHistoryByStudent(req, res) {
     const student = req.user;
-    if (!student || !student.id) return res.status(401).json({ message: 'Authentication required', success: false });
+    if (!student || !student.id) return sendError(res, 'Authentication required', 401);
 
     ScholarshipApplication.getHistoryByStudent(student.id, (err, rows) => {
       if (err) {
         console.error('Error fetching student application history:', err);
-        return res.status(500).json({ message: 'Internal server error', success: false, error: err });
+        return sendError(res, err, 500);
       }
 
       // parse documents JSON safely

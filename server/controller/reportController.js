@@ -2,6 +2,7 @@ const db = require('../config/database');
 const Reports = require('../model/reportModel');
 const fs = require('fs');
 const path = require('path');
+const { sendError } = require('../middleware/errorHandler');
 
 function formatCSV(rows, headers) {
   const escape = (v) => {
@@ -44,11 +45,9 @@ class ReportController {
         sql = 'SELECT * FROM applicants';
         if (hasDateRange) sql += ' WHERE DATE(created_at) BETWEEN ? AND ?', params.push(dateFrom, dateTo);
       } else {
-        return res.status(400).json({ message: 'Invalid report type', success: false });
-      }
-
-      db.query(sql, params, (err, results) => {
-        if (err) return res.status(500).json({ message: 'Database error', success: false, error: err });
+        return sendError(res, 'Invalid report type', 400);
+      }        db.query(sql, params, (err, results) => {
+        if (err) return sendError(res, err, 500);
 
         let headers = [];
         let rows = [];
@@ -135,19 +134,19 @@ class ReportController {
       });
     } catch (error) {
       console.error(error);
-      return res.status(500).json({ message: 'Internal server error', success: false, error });
+      return sendError(res, error, 500);
     }
   }
 
   static async downloadReport(req, res) {
     const id = req.params.id;
     Reports.getById(id, (err, results) => {
-      if (err) return res.status(500).json({ message: 'Internal server error', success: false, error: err });
-      if (!results || !results[0]) return res.status(404).json({ message: 'Report not found', success: false });
+      if (err) return sendError(res, err, 500);
+      if (!results || !results[0]) return sendError(res, 'Report not found', 404);
       const report = results[0];
       const filepath = path.join(__dirname, '..', 'generated_reports', report.filename);
       fs.access(filepath, fs.constants.R_OK, (accessErr) => {
-        if (accessErr) return res.status(404).json({ message: 'Report file not found', success: false });
+        if (accessErr) return sendError(res, 'Report file not found', 404);
         res.download(filepath, report.filename);
       });
     });
@@ -156,14 +155,14 @@ class ReportController {
   static async deleteReport(req, res) {
     const id = req.params.id;
     Reports.getById(id, (err, results) => {
-      if (err) return res.status(500).json({ message: 'Internal server error', success: false, error: err });
-      if (!results || !results[0]) return res.status(404).json({ message: 'Report not found', success: false });
+      if (err) return sendError(res, err, 500);
+      if (!results || !results[0]) return sendError(res, 'Report not found', 404);
       const report = results[0];
       const filepath = path.join(__dirname, '..', 'generated_reports', report.filename);
       fs.unlink(filepath, (unlinkErr) => {
         // ignore file unlink errors and proceed to delete DB row
         Reports.deleteById(id, (delErr, delRes) => {
-          if (delErr) return res.status(500).json({ message: 'Failed to delete report', success: false, error: delErr });
+          if (delErr) return sendError(res, delErr, 500);
           return res.status(200).json({ message: 'Report deleted', success: true });
         });
       });
@@ -172,7 +171,7 @@ class ReportController {
 
   static async getSummary(req, res) {
     Reports.getSummary((err, data) => {
-      if (err) return res.status(500).json({ message: 'Internal server error', success: false, error: err });
+      if (err) return sendError(res, err, 500);
 
       const response = {
         totalReportsGenerated: data.total_this_month || 0,
@@ -188,7 +187,7 @@ class ReportController {
   static async getRecent(req, res) {
     const limit = parseInt(req.query.limit || '10', 10);
     Reports.getRecent(limit, (err, results) => {
-      if (err) return res.status(500).json({ message: 'Internal server error', success: false, error: err });
+      if (err) return sendError(res, err, 500);
       res.status(200).json({ message: 'Recent reports', success: true, data: results });
     });
   }

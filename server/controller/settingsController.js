@@ -1,10 +1,11 @@
 const Settings = require('../model/settingsModel');
+const { sendError } = require('../middleware/errorHandler');
 
 const settingsController = {
   // Maintenance Mode
   getMaintenanceMode: (req, res) => {
     Settings.getByKey('maintenance_mode', (err, result) => {
-      if (err) return res.status(500).json({ message: err.message || 'Internal server error', success: false });
+      if (err) return sendError(res, err, 500);
       const row = (result && result.length > 0) ? result[0] : null;
       const val = row ? (String(row.setting_value) === 'true') : false;
       return res.status(200).json({ message: 'ok', success: true, value: val });
@@ -13,11 +14,11 @@ const settingsController = {
 
   setMaintenanceMode: (req, res) => {
     const { value } = req.body;
-    if (typeof value === 'undefined') return res.status(400).json({ message: 'Missing value', success: false });
+    if (typeof value === 'undefined') return sendError(res, 'Missing value', 400);
     const v = value ? 'true' : 'false';
 
     Settings.upsert('maintenance_mode', v, (err) => {
-      if (err) return res.status(500).json({ message: err.message || 'Internal server error', success: false });
+      if (err) return sendError(res, err, 500);
       return res.status(200).json({ message: 'Maintenance mode updated', success: true, value: v === 'true' });
     });
   },
@@ -35,7 +36,7 @@ const settingsController = {
   getAllowGradeEdit: (req, res) => {
     // return allow flag as well as current session id and semester so clients can detect prior updates
     Settings.getByKey('allow_grade_edit', (err, result) => {
-      if (err) return res.status(500).json({ message: err.message || 'Internal server error', success: false });
+      if (err) return sendError(res, err, 500);
       const row = (result && result.length > 0) ? result[0] : null;
       const val = row ? (String(row.setting_value) === 'true') : false;
 
@@ -57,13 +58,13 @@ const settingsController = {
 
   setAllowGradeEdit: (req, res) => {
     const { value, semester } = req.body;
-    if (typeof value === 'undefined') return res.status(400).json({ message: 'Missing value', success: false });
+    if (typeof value === 'undefined') return sendError(res, 'Missing value', 400);
     const v = value ? 'true' : 'false';
 
     // when enabling, require semester info
     if (value) {
       if (!semester || typeof semester !== 'string' || !semester.match(/^[0-9]{4}-S[12]$/)) {
-        return res.status(400).json({ message: 'Missing or invalid semester. Use format YYYY-S1 or YYYY-S2', success: false });
+        return sendError(res, 'Missing or invalid semester. Use format YYYY-S1 or YYYY-S2', 400);
       }
     }
 
@@ -71,7 +72,7 @@ const settingsController = {
     const sessionId = value ? String(Date.now()) : '';
 
     Settings.upsert('allow_grade_edit', v, (err) => {
-      if (err) return res.status(500).json({ message: err.message || 'Internal server error', success: false });
+      if (err) return sendError(res, err, 500);
 
       // store/clear session id and semester
       Settings.upsert('grade_edit_session', sessionId, (err2) => {
