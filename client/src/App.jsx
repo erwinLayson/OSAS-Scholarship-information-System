@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 
 // Pages
 import ApplicantRegister from './pages/applicants/ApplicantRegister'
@@ -16,6 +16,7 @@ import { LandingPages } from "./pages/LandingPages";
 
 // Components
 import ProtectedRoutes from "./components/private/protectRoutes"
+import { getAuthRole } from "./hooks/useAuthRole";
 
 // Role-based route guards.
 const AdminRoute = (props) => (
@@ -26,6 +27,15 @@ const StudentRoute = (props) => (
   <ProtectedRoutes allowedRoles={["student"]} {...props} />
 );
 
+// Public landing page at the root for anonymous visitors; signed-in users
+// (per the local role mirror) are sent straight to their own dashboard.
+const RootRoute = () => {
+  const role = getAuthRole();
+  if (role === "admin") return <Navigate to="/dashboard" replace />;
+  if (role === "student") return <Navigate to="/student/dashboard" replace />;
+  return <LandingPages />;
+};
+
 function App() {
 
   return (
@@ -33,6 +43,7 @@ function App() {
       <Router>
         <Routes>
           {/* Public Routes */}
+          <Route path='/' element={<RootRoute/>} />
           <Route path='/login' element={<Login/>} />
           <Route path='/register' element={<ApplicantRegister/>} />
           <Route path='/home' element={<LandingPages/>} />
@@ -41,7 +52,6 @@ function App() {
           <Route path='/student/dashboard' element={<StudentRoute elements={<StudentDashboard/>}/>} />
 
           {/* Protected Admin Routes (admins only) */}
-          <Route path='/' element={<AdminRoute elements={<AdminDashboard/>}/>} />
           <Route path='/dashboard' element={<AdminRoute elements={<AdminDashboard/>}/>} />
           <Route path='/admin/students' element={<AdminRoute elements={<Students/>}/>} />
           <Route path='/admin/manage' element={<AdminRoute elements={<ManageAdmin/>}/>} />
@@ -50,6 +60,9 @@ function App() {
           <Route path='/admin/scholarships' element={<AdminRoute elements={<Scholarships/>}/>} />
           <Route path='/admin/reports' element={<AdminRoute elements={<Reports/>}/>} />
           <Route path='/admin/settings' element={<AdminRoute elements={<Settings/>}/>} />
+
+          {/* Unknown URLs -> the public landing page. */}
+          <Route path='*' element={<Navigate to='/' replace />} />
         </Routes>
       </Router>
     </>

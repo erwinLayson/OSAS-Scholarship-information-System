@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { NavLink, useLocation } from "react-router-dom";
 import { GraduationCapIcon } from "../Icons";
 
 export function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const headerRef = useRef(null);
   const location = useLocation();
 
   // Handle scroll effect for navbar shadow
@@ -20,6 +21,27 @@ export function Navbar() {
   useEffect(() => {
     setMobileMenuOpen(false);
   }, [location]);
+
+  // Close the dropdown when clicking outside the header or pressing Escape.
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+
+    const handlePointerDown = (e) => {
+      if (headerRef.current && !headerRef.current.contains(e.target)) {
+        setMobileMenuOpen(false);
+      }
+    };
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") setMobileMenuOpen(false);
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [mobileMenuOpen]);
 
   const navLinks = [
     { name: 'Home', href: '#home' },
@@ -43,6 +65,7 @@ export function Navbar() {
   return (
     <>
       <header 
+        ref={headerRef}
         className={`
           fixed top-0 left-0 right-0 z-50 transition-all duration-300
           ${scrolled 
@@ -103,6 +126,8 @@ export function Navbar() {
               className="md:hidden p-2 text-gray-600 hover:text-emerald-600 hover:bg-gray-100 rounded-lg transition-colors"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               aria-label="Toggle menu"
+              aria-expanded={mobileMenuOpen}
+              aria-controls="mobile-menu"
             >
               {mobileMenuOpen ? (
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -117,79 +142,54 @@ export function Navbar() {
             )}
           </div>
         </div>
+
+        {/* Mobile Menu Dropdown */}
+        {!isAuthPage && (
+          <div
+            id="mobile-menu"
+            className={`
+              md:hidden absolute top-full left-0 right-0 origin-top
+              transition-all duration-200 ease-out
+              ${mobileMenuOpen
+                ? 'opacity-100 translate-y-0 pointer-events-auto'
+                : 'opacity-0 -translate-y-2 pointer-events-none'}
+            `}
+          >
+            <div className="bg-white border-t border-gray-100 shadow-xl">
+              <nav className="px-4 py-3">
+                <ul className="space-y-1">
+                  {navLinks.map((link) => (
+                    <li key={link.name}>
+                      <a
+                        href={link.href}
+                        onClick={(e) => scrollToSection(e, link.href)}
+                        className="block px-4 py-3 text-gray-600 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg font-medium transition-colors"
+                      >
+                        {link.name}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+
+                {/* Divider */}
+                <div className="my-3 border-t border-gray-100"></div>
+
+                {/* Auth Links */}
+                <ul>
+                  <li>
+                    <NavLink
+                      to="/login"
+                      className="block px-4 py-3 bg-emerald-600 text-white text-center rounded-lg font-medium hover:bg-emerald-700 transition-colors"
+                    >
+                      Login
+                    </NavLink>
+                  </li>
+                </ul>
+              </nav>
+            </div>
+          </div>
+        )}
       </header>
-
-      {/* Mobile Menu Overlay */}
-      <div 
-        className={`
-          fixed inset-0 bg-black/50 z-40 md:hidden transition-opacity duration-300
-          ${mobileMenuOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}
-        `}
-        onClick={() => setMobileMenuOpen(false)}
-      />
-
-      {/* Mobile Menu Slide-in */}
-      <aside 
-        className={`
-          fixed top-0 right-0 h-full w-72 bg-white z-50 md:hidden
-          transform transition-transform duration-300 ease-out shadow-2xl
-          ${mobileMenuOpen ? 'translate-x-0' : 'translate-x-full'}
-        `}
-      >
-        <div className="flex flex-col h-full">
-          {/* Mobile Menu Header */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-100">
-            <span className="text-lg font-bold text-gray-900">Menu</span>
-            <button 
-              onClick={() => setMobileMenuOpen(false)}
-              className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-
-          {/* Mobile Nav Links */}
-          <nav className="flex-1 px-4 py-6">
-            <ul className="space-y-2">
-              {navLinks.map((link) => (
-                <li key={link.name}>
-                  <a 
-                    href={link.href}
-                    onClick={(e) => scrollToSection(e, link.href)}
-                    className="block px-4 py-3 text-gray-600 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg font-medium transition-colors"
-                  >
-                    {link.name}
-                  </a>
-                </li>
-              ))}
-            </ul>
-
-            {/* Divider */}
-            <div className="my-6 border-t border-gray-100"></div>
-
-            {/* Auth Links */}
-            <ul className="space-y-2">
-              <li>
-                <NavLink 
-                  to="/login" 
-                  className="block px-4 py-3 bg-emerald-600 text-white text-center rounded-lg font-medium hover:bg-emerald-700 transition-colors"
-                >
-                  Login
-                </NavLink>
-              </li>
-            </ul>
-          </nav>
-
-          {/* Mobile Menu Footer */}
-          <div className="p-4 border-t border-gray-100 bg-gray-50">
-            <p className="text-xs text-gray-500 text-center">
-              © 2026 OSAS System
-            </p>
-          </div>
-        </div>
-      </aside>
 
       {/* Spacer for fixed header */}
       <div className="h-16 md:h-20"></div>
