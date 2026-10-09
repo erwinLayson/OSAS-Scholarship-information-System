@@ -280,14 +280,14 @@ const [studentEditData, setStudentEditData] = useState({
             <table className="w-full">
               <thead>
                 <tr className="border-b border-gray-100">
-                  <th className="text-left py-4 px-4 text-gray-600 font-semibold text-sm">ID</th>
-                  <th className="text-left py-4 px-4 text-gray-600 font-semibold text-sm">Student Name</th>
-                  <th className="text-left py-4 px-4 text-gray-600 font-semibold text-sm">Email</th>
-                  <th className="text-left py-4 px-4 text-gray-600 font-semibold text-sm">Subjects</th>
-                  <th className="text-left py-4 px-4 text-gray-600 font-semibold text-sm">Status</th>
-                  <th className="text-left py-4 px-4 text-gray-600 font-semibold text-sm">Average</th>
-                  <th className="text-left py-4 px-4 text-gray-600 font-semibold text-sm">Date Approved</th>
-                  <th className="text-left py-4 px-4 text-gray-600 font-semibold text-sm">Actions</th>
+                  <th className="text-left py-4 px-4 text-gray-600 font-semibold text-sm whitespace-nowrap">ID</th>
+                  <th className="text-left py-4 px-4 text-gray-600 font-semibold text-sm whitespace-nowrap">Student Name</th>
+                  <th className="text-left py-4 px-4 text-gray-600 font-semibold text-sm whitespace-nowrap">Email</th>
+                  <th className="text-left py-4 px-4 text-gray-600 font-semibold text-sm whitespace-nowrap">Subjects</th>
+                  <th className="text-left py-4 px-4 text-gray-600 font-semibold text-sm whitespace-nowrap">Status</th>
+                  <th className="text-left py-4 px-4 text-gray-600 font-semibold text-sm whitespace-nowrap">Average</th>
+                  <th className="text-left py-4 px-4 text-gray-600 font-semibold text-sm whitespace-nowrap">Date Approved</th>
+                  <th className="text-left py-4 px-4 text-gray-600 font-semibold text-sm whitespace-nowrap">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -301,25 +301,25 @@ const [studentEditData, setStudentEditData] = useState({
 
                     return (
                       <tr key={student.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
-                        <td className="py-4 px-4 text-gray-500 font-mono text-sm">#{student.id}</td>
-                        <td className="py-4 px-4 text-gray-900 font-medium">{student.name}</td>
-                        <td className="py-4 px-4 text-gray-600">{student.email}</td>
-                        <td className="py-4 px-4">
+                        <td className="py-4 px-4 text-gray-500 font-mono text-sm whitespace-nowrap">#{student.id}</td>
+                        <td className="py-4 px-4 text-gray-900 font-medium whitespace-nowrap">{student.name}</td>
+                        <td className="py-4 px-4 text-gray-600 whitespace-nowrap">{student.email}</td>
+                        <td className="py-4 px-4 whitespace-nowrap">
                           <Badge variant="info">
                             {subjects.length} {subjects.length === 1 ? 'subject' : 'subjects'}
                           </Badge>
                         </td>
-                        <td className="py-4 px-4">
+                        <td className="py-4 px-4 whitespace-nowrap">
                           <Badge variant={totalUnits >= 24 ? 'success' : 'warning'}>
                             {totalUnits >= 24 ? 'Regular' : 'Irregular'}
                           </Badge>
                         </td>
-                        <td className="py-4 px-4">
+                        <td className="py-4 px-4 whitespace-nowrap">
                           <span className={`text-lg font-semibold ${isPassing ? 'text-emerald-600' : 'text-red-600'}`}>
                             {average}
                           </span>
                         </td>
-                        <td className="py-4 px-4 text-gray-600 text-sm">
+                        <td className="py-4 px-4 text-gray-600 text-sm whitespace-nowrap">
                           {formatDate(student.created_at, 'medium')}
                         </td>
                         <td className="py-4 px-4">

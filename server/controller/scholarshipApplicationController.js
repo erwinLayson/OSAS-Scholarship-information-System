@@ -2,7 +2,9 @@ const path = require('path');
 const fs = require('fs');
 const ScholarshipApplication = require('../model/scholarshipApplicationModel');
 const { authenticateStudent } = require('../authenticate/auth');
-const { sendScholarshipMail, rejectionMail } = require('./shared/mailer');
+const { sendScholarshipMail, rejectionMail, sendScholarshipApprovalMail } = require('./shared/mailer');
+const applicantsModel = require('../model/applicantsModel');
+const studentModel = require('../model/studentModel');
 const { sendError } = require('../middleware/errorHandler');
 
 class ScholarshipApplicationController {
@@ -110,56 +112,63 @@ class ScholarshipApplicationController {
     const { status } = req.body;
     if (!status) return sendError(res, 'Status required', 400);
 
-    // Only move to history if approved or rejected
     if (status !== 'Approved' && status !== 'Rejected') {
       return sendError(res, 'Status must be Approved or Rejected', 400);
     }
-
-    const { reduceAvailableSlots } = require('../model/scholarshipSlotUtils');
 
     ScholarshipApplication.getById(id, (err, rows) => {
       if (err) return sendError(res, err, 500);
       if (!rows || rows.length === 0) return sendError(res, 'Application not found', 404);
       const app = rows[0];
 
+      // Fetch student name (used for both approval and rejection emails)
+      let studentName = 'Student';
+      try {
+        studentModel.getById(app.student_id, (fetchErr, studentRows) => {
+          if (!fetchErr && studentRows && studentRows.length > 0) {
+            studentName = studentRows[0].name || studentRows[0].studentName || 'Student';
+          }
+        });
+      } catch (fetchErr) {
+        console.warn('Could not fetch student name for email:', fetchErr.message);
+      }
+
+      const scholarshipName = app.scholarship_name || 'the scholarship';
+      const to = app.email || app.email;
+
       // Move application to history and delete from active table
       ScholarshipApplication.moveToHistory(id, status, (moveErr) => {
         if (moveErr) return sendError(res, moveErr, 500);
 
-        // If approving, reduce available slots
         if (status === 'Approved') {
+          const { reduceAvailableSlots } = require('../model/scholarshipSlotUtils');
           reduceAvailableSlots(app.scholarship_id, 1, (slotErr) => {
             if (slotErr) {
               console.error('Failed to reduce scholarship slots:', slotErr);
-              // Continue, but log error
             }
-            // send notification email to applicant
             try {
-              const to = app.email || app.email;
-              const scholarshipName = app.scholarship_name || 'the scholarship';
-              sendScholarshipMail(
-                'Scholarship Application Approved',
-                to,
-                `Congratulations! Your application for ${scholarshipName} has been approved.`
-              );
+              sendScholarshipApprovalMail(to, {
+                studentName,
+                email: to,
+                scholarshipName,
+                amount: app.amount || null
+              });
             } catch (e) {
-              console.warn('Failed to send status email', e && e.message);
+              console.warn('Failed to send approval email', e && e.message);
             }
             return res.status(200).json({ message: 'Application approved and moved to history', success: true });
           });
         } else {
-          // Rejected - send rejection email
           try {
-            const to = app.email || app.email;
-            const scholarshipName = app.scholarship_name || 'the scholarship';
             rejectionMail(
               to,
-              'Scholarship Application Rejected',
-              'We are sorry to inform you',
-              `Your application for ${scholarshipName} has been rejected.`
+              'Scholarship Application Update — ' + scholarshipName,
+              'We regret to inform you that your application was not approved.',
+              scholarshipName,
+              { studentName, email: to, scholarshipName }
             );
           } catch (e) {
-            console.warn('Failed to send status email', e && e.message);
+            console.warn('Failed to send rejection email', e && e.message);
           }
           return res.status(200).json({ message: 'Application rejected and moved to history', success: true });
         }
