@@ -134,11 +134,14 @@ const ApplicantRegister = () => {
 
       {/* Main Content */}
       <main className="flex-1 flex items-center justify-center px-4 pb-12 mt-10">
-        <div className="w-full max-w-2xl">
-          
+        <div className="w-full max-w-5xl">
 
-          {/* Registration Card */}
-          <Card className="shadow-xl">
+          {/* Two-panel layout: 75% form / 25% subjects preview */}
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+
+            {/* Left Panel — Registration Form (75%) */}
+            <div className="lg:col-span-3">
+              <Card className="shadow-xl">
             {maintenanceMode && (
               <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
                 <div className="flex items-center gap-3">
@@ -244,32 +247,6 @@ const ApplicantRegister = () => {
                 </div>
                 <p className="mt-2 text-sm text-gray-500">Enter subject name, grade, and units, then click "Add"</p>
 
-                {/* Display Added Subjects */}
-                {subjectList.length > 0 && (
-                  <div className="mt-4">
-                    <p className="text-sm font-semibold text-gray-700 mb-2">Added Subjects:</p>
-                    <div className="flex flex-wrap gap-2">
-                      {subjectList.map((item, index) => (
-                        <div
-                          key={index}
-                          className="flex items-center gap-2 bg-emerald-50 text-emerald-800 px-3 py-2 rounded-xl border border-emerald-200"
-                        >
-                          <span className="font-medium">{item.subject}</span>
-                          <span className="text-sm bg-emerald-600 text-white px-2 py-0.5 rounded-lg">{item.grade}</span>
-                          <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-lg">{item.unit} unit{item.unit === '1' ? '' : 's'}</span>
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveSubject(index)}
-                            className="text-emerald-600 hover:text-red-500 transition-colors ml-1"
-                            disabled={loading || maintenanceMode}
-                          >
-                            <CloseIcon size="1rem" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
 
               {/* Terms and Conditions */}
@@ -306,16 +283,72 @@ const ApplicantRegister = () => {
               </Button>
             </form>
 
-            {/* Footer */}
-            <div className="mt-6 pt-6 border-t border-gray-200 text-center">
-              <p className="text-sm text-gray-600">
-                Already have an account?{' '}
-                <NavLink to="/login" className="font-semibold text-emerald-600 hover:text-emerald-700 transition-colors">
-                  Login here
-                </NavLink>
-              </p>
+              {/* Footer */}
+              <div className="mt-6 pt-6 border-t border-gray-200 text-center">
+                <p className="text-sm text-gray-600">
+                  Already have an account?{' '}
+                  <NavLink to="/login" className="font-semibold text-emerald-600 hover:text-emerald-700 transition-colors">
+                    Login here
+                  </NavLink>
+                </p>
+              </div>
+            </Card>
             </div>
-          </Card>
+
+            {/* Right Panel — Added Subjects Preview (25%) */}
+            <div className="lg:col-span-1">
+              <Card className="shadow-xl sticky top-24">
+                <div className="flex items-center gap-2 mb-5">
+                  <BookIcon size="1.25rem" className="text-emerald-600" />
+                  <h2 className="font-semibold text-gray-800">Your Subjects</h2>
+                </div>
+
+                {subjectList.length === 0 ? (
+                  <div className="text-center py-10">
+                    <div className="w-14 h-14 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <BookIcon size="1.5rem" className="text-emerald-400" />
+                    </div>
+                    <p className="text-sm text-gray-500">No subjects added yet</p>
+                    <p className="text-xs text-gray-400 mt-1">Add subjects from the form</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {subjectList.map((item, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center gap-3 p-3 bg-emerald-50 rounded-xl border border-emerald-200"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-gray-800 text-sm truncate">{item.subject}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-xs bg-emerald-600 text-white px-2 py-0.5 rounded-lg">{item.grade}</span>
+                            <span className="text-xs text-gray-500">{item.unit} unit{item.unit === '1' ? '' : 's'}</span>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveSubject(index)}
+                          className="text-gray-400 hover:text-red-500 transition-colors flex-shrink-0"
+                          disabled={loading || maintenanceMode}
+                        >
+                          <CloseIcon size="1rem" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {subjectList.length > 0 && (
+                  <div className="mt-4 pt-4 border-t border-gray-200">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-500">Total Subjects</span>
+                      <span className="font-bold text-emerald-600">{subjectList.length}</span>
+                    </div>
+                  </div>
+                )}
+              </Card>
+            </div>
+          </div>
         </div>
       </main>
 
