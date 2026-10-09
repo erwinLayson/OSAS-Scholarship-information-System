@@ -1,5 +1,6 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const { getEnv } = require('../config/env');
 const {approvalMail, rejectionMail} = require("./shared/mailer");
 
 const Students = require('../model/studentModel');
@@ -136,7 +137,7 @@ const studentController = {
                     return studentController.errorMessage(res, 401, { message: "Incorrect password", success: false })
                 }
 
-                const token = jwt.sign({ username, id: student.id }, process.env.STUDENT_LOGIN_SECRET_KEY, { expiresIn: "1h" });
+                const token = jwt.sign({ username, id: student.id }, getEnv('STUDENT_LOGIN_SECRET_KEY'), { expiresIn: "1h" });
 
                 res.cookie("studentLogin", token, {
                     sameSite: "lax",
@@ -283,7 +284,7 @@ const studentController = {
                                     // If username was changed, re-issue student JWT so token matches new username
                                     const newUsername = updateData.username || student.username;
                                     try {
-                                        const newToken = require('jsonwebtoken').sign({ username: newUsername, id: studentId }, process.env.STUDENT_LOGIN_SECRET_KEY, { expiresIn: '1h' });
+                                        const newToken = require('jsonwebtoken').sign({ username: newUsername, id: studentId }, getEnv('STUDENT_LOGIN_SECRET_KEY'), { expiresIn: '1h' });
                                         res.cookie('studentLogin', newToken, { sameSite: 'lax', httpOnly: true, secure: false });
                                         return studentController.successMessage(res, 200, { message: 'Profile updated successfully', success: true, token: newToken }, updateRes);
                                     } catch (e) {

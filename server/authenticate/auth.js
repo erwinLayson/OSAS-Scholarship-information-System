@@ -1,13 +1,12 @@
-require("dotenv").config();
-
 const jwt = require('jsonwebtoken');
+const { getEnv } = require('../config/env');
 
 function authenticateAdmin(req, res, next) {
     const token = req.cookies.adminLogin;
 
     if (!token) return res.status(401).json({ message: "Authentication required", success: false });
 
-    jwt.verify(token, process.env.ADMIN_LOGIN_SECRET_KEY, (err, data) => {
+    jwt.verify(token, getEnv('ADMIN_LOGIN_SECRET_KEY'), (err, data) => {
         if (err) return res.status(403).json({ message: "Invalid or expired token", success: false })
         
         req.user = data;
@@ -38,7 +37,7 @@ function authenticateStudent(req, res, next) {
             console.log('authenticateStudent: token snippet=', snippet);
         } catch (e) { /* ignore */ }
 
-        jwt.verify(authToken, process.env.STUDENT_LOGIN_SECRET_KEY, (err, data) => {
+        jwt.verify(authToken, getEnv('STUDENT_LOGIN_SECRET_KEY'), (err, data) => {
             if (err) {
                 console.warn('authenticateStudent: token verify failed', err && err.message);
                 return res.status(403).json({ message: "Invalid or expired token", success: false });

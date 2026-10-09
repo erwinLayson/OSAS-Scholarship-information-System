@@ -1,8 +1,6 @@
-require("dotenv").config();
-
 const jwt = require('jsonwebtoken');
 const bcrypt = require("bcrypt");
-
+const { getEnv } = require('../config/env');
 
 const admin = require("../model/adminModel");
 const applicants = require('../model/applicantsModel');
@@ -14,7 +12,7 @@ function errorMessage(res, stauts, message) {
 
 class adminController {
     static adminLogin(req, res) {
-        const SECRET_KEY = process.env.ADMIN_LOGIN_SECRET_KEY;
+        const SECRET_KEY = getEnv('ADMIN_LOGIN_SECRET_KEY');
         const { username, password } = req.body;
         
         if (username === "" || password === "") {
@@ -73,7 +71,7 @@ class adminController {
     }
 
     static verifyToken(req, res) {
-        const SECRET_KEY = process.env.ADMIN_LOGIN_SECRET_KEY;
+        const SECRET_KEY = getEnv('ADMIN_LOGIN_SECRET_KEY');
         const token = req.cookies.adminLogin;
 
         if (!token) {

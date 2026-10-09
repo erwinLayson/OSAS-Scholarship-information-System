@@ -1,13 +1,13 @@
-require("dotenv").config();
 const nodemailer = require("nodemailer");
+const { getEnv } = require('../config/env');
 
-const systemEmail = process.env.SYSTEM_GMAIL;
+const systemEmail = getEnv('SYSTEM_GMAIL');
 
 const mailer = nodemailer.createTransport({
     service: "gmail",
     auth: {
-        user: process.env.PRIVATE_GMAIL,
-        pass: process.env.APP_CODE
+        user: getEnv('PRIVATE_GMAIL'),
+        pass: getEnv('APP_CODE')
     }
 });
 
