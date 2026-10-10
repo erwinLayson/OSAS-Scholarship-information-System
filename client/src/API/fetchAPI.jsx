@@ -19,18 +19,15 @@ API.interceptors.request.use((config) => {
 // After each response, sync the auth state from the server.
 // If the server returns a fresh token (e.g. after login/profile update), store it.
 API.interceptors.response.use(
-    (res) => {
-        // Some login/profile endpoints echo the token back in the body.
-        if (res.data && res.data.token) {
-            localStorage.setItem('student_token', res.data.token);
-        }
-        return res;
-    },
+    // The session lives in the server's httpOnly cookie and is sent
+    // automatically (withCredentials), so no token is kept client-side.
+    (res) => res,
     (err) => {
         // 401/403 responses mean the session or role is no longer valid.
         // Clear local role state so the UI can react (e.g. redirect to login).
         if (err.response && (err.response.status === 401 || err.response.status === 403)) {
             clearAuthRole();
+            // Purge any token left behind by older builds.
             localStorage.removeItem('student_token');
         }
         return Promise.reject(err);

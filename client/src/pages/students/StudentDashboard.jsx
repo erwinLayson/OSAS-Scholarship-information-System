@@ -214,13 +214,10 @@ const ApplyForm = ({ scholarship, onClose, showToast }) => {
 
     try {
       setSubmitting(true);
-      const token = localStorage.getItem('student_token');
-      if (!token) {
-        showToast('Authentication required. Please login again.', 'error');
-        return;
-      }
 
-      const res = await API.post(`/scholarships/apply/${scholarship.id}`, formData, { headers: { Authorization: `Bearer ${token}` } });
+      // The session travels in the httpOnly cookie (sent automatically with
+      // credentials), so no Authorization header is needed here.
+      const res = await API.post(`/scholarships/apply/${scholarship.id}`, formData);
       if (res.data && res.data.success) {
         showToast('Application submitted successfully!', 'success');
         setFiles([]);

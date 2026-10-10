@@ -47,11 +47,9 @@ const Login = () => {
         return;
       }
 
-      // Mirror the server-authoritative role into client state.
+      // Mirror the server-authoritative role into client state. The session
+      // itself lives in the server's httpOnly cookie, so no token is stored here.
       setAuthRole(result.role);
-      if (result.token) {
-        try { localStorage.setItem('student_token', result.token); } catch { /* ignore */ }
-      }
 
       showToast('Login successful! Redirecting...', 'success');
       const target = HOME_BY_ROLE[result.role] || '/login';
